@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments and local secrets
+.venv/
+.env
+.env.*
+!.env.example
+
+# Test and quality tooling
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+
+# Packaging and build output
+build/
+dist/
+*.egg-info/
+
+# Generated model artifacts and local output
+models/*.joblib
+models/*.pkl
+artifacts/
+
+# Editors and operating systems
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pmsm-ai-design-assistant"
+version = "0.1.0"
+description = "永磁同步电机 AI 设计助手课程项目预研骨架"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "PyQt6>=6.7,<7",
+  "numpy>=1.26,<3",
+  "pandas>=2.2,<3",
+  "scikit-learn>=1.5,<2",
+  "matplotlib>=3.9,<4",
+  "joblib>=1.4,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<10",
+  "pytest-qt>=4.4,<5",
+  "ruff>=0.7,<1",
+]
+
+[project.scripts]
+pmsm-ai = "pmsm_ai.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
