@@ -7,6 +7,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QFont, QFontDatabase
 from PyQt6.QtWidgets import QApplication
 
@@ -295,7 +296,17 @@ def create_application(argv: Sequence[str] | None = None) -> QApplication:
 def main(argv: Sequence[str] | None = None) -> int:
     """Launch the desktop application."""
 
-    application = create_application(argv)
+    arguments = list(argv) if argv is not None else sys.argv
+    smoke_test = "--smoke-test" in arguments
+    if smoke_test:
+        arguments = [argument for argument in arguments if argument != "--smoke-test"]
+
+    application = create_application(arguments)
     window = MainWindow()
     window.show()
-    return application.exec()
+    if smoke_test:
+        QTimer.singleShot(500, application.quit)
+    exit_code = application.exec()
+    if smoke_test and window.prediction_service is None:
+        return 2
+    return exit_code

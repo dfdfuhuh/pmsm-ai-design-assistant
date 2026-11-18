@@ -27,6 +27,9 @@ dev = [
 fea = [
   "pyaedt==1.10.0",
 ]
+package = [
+  "pyinstaller==6.22.3",
+]
 
 [project.scripts]
 pmsm-ai = "pmsm_ai.app:main"

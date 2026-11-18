@@ -10,6 +10,22 @@
 
 [查看使用说明页](docs/images/usage-guide.png)
 
+## 免安装便携版
+
+已构建 Windows 64 位免安装 ZIP：
+
+```text
+D:\CODES\PMSM-AI-Design-Assistant-portable.zip
+```
+
+约 197.9 MB。复制到另一台 Windows 10/11 64 位电脑后：
+
+1. 解压整个 ZIP。
+2. 进入 `PMSM-AI-Design-Assistant` 文件夹。
+3. 双击 `PMSM-AI-Design-Assistant.exe`。
+
+目标电脑不需要 Python、Conda、VS Code、Maxwell 或许可证。便携版包含运行库、数据和已训练模型。详细校验信息见 [便携版说明](docs/09-portable-package.md)。
+
 ## 已实现
 
 - 表贴式 4 极 6 槽、6 极 9 槽、8 极 12 槽、8 极 18 槽和 10 极 12 槽五种拓扑。
@@ -101,6 +117,7 @@ GUI 测试固定使用 `QT_QPA_PLATFORM=offscreen`，不要求桌面显示服务
 - [环境报告](docs/06-environment-report.md)
 - [数据与模型卡](docs/07-model-card.md)
 - [Maxwell FEA 工作流](docs/08-fea-workflow.md)
+- [免安装便携版](docs/09-portable-package.md)
 - [参考资料](docs/references.md)
 
 ## 使用边界

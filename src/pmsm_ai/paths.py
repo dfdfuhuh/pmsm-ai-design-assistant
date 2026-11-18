@@ -2,11 +2,33 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
+
+def runtime_roots(
+    frozen: bool,
+    executable: Path,
+    bundled_root: Path,
+    project_root: Path,
+) -> tuple[Path, Path]:
+    """Return writable application root and read-only resource root."""
+
+    if frozen:
+        return executable.resolve().parent, bundled_root
+    return project_root, project_root
+
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
-DATA_DIR = PROJECT_ROOT / "data"
+FROZEN = bool(getattr(sys, "frozen", False))
+APP_ROOT, RESOURCE_ROOT = runtime_roots(
+    frozen=FROZEN,
+    executable=Path(sys.executable),
+    bundled_root=Path(getattr(sys, "_MEIPASS", PROJECT_ROOT)),
+    project_root=PROJECT_ROOT,
+)
+ARTIFACTS_DIR = APP_ROOT / "artifacts"
+DATA_DIR = RESOURCE_ROOT / "data"
 DATA_FEA_DIR = DATA_DIR / "fea"
 FEA_RUNS_DIR = ARTIFACTS_DIR / "fea_runs"
 DEFAULT_DATASET_PATH = DATA_DIR / "pmsm_spm_multitopology_synthetic.csv"
