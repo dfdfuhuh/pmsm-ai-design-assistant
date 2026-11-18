@@ -57,6 +57,39 @@ QFrame#panel, QFrame#environment-panel, QFrame#metric-card {
     border: 1px solid #dbe5df;
     border-radius: 14px;
 }
+QFrame#guide-intro {
+    background: #e8f2ed;
+    border: 1px solid #cfe1d8;
+    border-radius: 14px;
+}
+QFrame#guide-card {
+    background: #ffffff;
+    border: 1px solid #dbe5df;
+    border-radius: 12px;
+}
+QLabel#guide-intro-title {
+    color: #173c31;
+    font-size: 22px;
+    font-weight: 700;
+}
+QLabel#guide-intro-text {
+    color: #526a60;
+    font-size: 13px;
+}
+QLabel#step-badge {
+    color: #1f7c5b;
+    font-size: 11px;
+    font-weight: 700;
+}
+QLabel#guide-card-title {
+    color: #183c31;
+    font-size: 16px;
+    font-weight: 700;
+}
+QLabel#guide-card-body {
+    color: #61736c;
+    font-size: 12px;
+}
 QLabel#section-title {
     color: #173c31;
     font-size: 17px;

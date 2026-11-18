@@ -13,7 +13,11 @@ def test_main_window_contains_three_workbench_tabs(qtbot, tiny_service) -> None:
     assert window.windowTitle() == "永磁同步电机 AI 设计助手"
     assert window.check_button.text() == "检查开发环境"
     assert window.environment_output.isReadOnly()
-    assert window.tabs.count() == 3
+    assert window.tabs.count() == 4
+    assert window.tabs.tabText(1) == "使用说明"
+    assert window.tabs.currentIndex() == 0
+    assert len(window.guide_cards) == 6
+    assert "五步" in window.usage_title.text()
     assert window.input_tabs.count() == 2
     assert window.topology_combo.count() == 5
     assert window.predict_button.isEnabled()

@@ -16,6 +16,7 @@ def main() -> int:
     output_directory.mkdir(parents=True, exist_ok=True)
     design_output = output_directory / "launch-page.png"
     advanced_output = output_directory / "advanced-parameters.png"
+    guide_output = output_directory / "usage-guide.png"
     model_output = output_directory / "model-evaluation.png"
 
     application = create_application([])
@@ -38,6 +39,12 @@ def main() -> int:
 
     window.tabs.setCurrentIndex(1)
     application.processEvents()
+    if not window.grab().save(str(guide_output), "PNG"):
+        print(f"无法保存预览：{guide_output}")
+        return 1
+
+    window.tabs.setCurrentIndex(2)
+    application.processEvents()
     if not window.grab().save(str(model_output), "PNG"):
         print(f"无法保存预览：{model_output}")
         return 1
@@ -45,6 +52,7 @@ def main() -> int:
     window.close()
     print(f"设计页预览已保存：{design_output}")
     print(f"高级参数页预览已保存：{advanced_output}")
+    print(f"使用说明页预览已保存：{guide_output}")
     print(f"模型评估页预览已保存：{model_output}")
     return 0
 

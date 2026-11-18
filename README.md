@@ -8,6 +8,8 @@
 
 [查看高级参数页](docs/images/advanced-parameters.png)
 
+[查看使用说明页](docs/images/usage-guide.png)
+
 ## 已实现
 
 - 表贴式 4 极 6 槽、6 极 9 槽、8 极 12 槽、8 极 18 槽和 10 极 12 槽五种拓扑。

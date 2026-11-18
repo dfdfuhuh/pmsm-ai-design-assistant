@@ -69,6 +69,33 @@ ADVANCED_MECHANICAL_NAMES = (
 )
 
 
+class GuideCard(QFrame):
+    """Numbered instruction card used by the built-in user guide."""
+
+    def __init__(
+        self,
+        step: str,
+        title: str,
+        body: str,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setObjectName("guide-card")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(7)
+        badge = QLabel(step)
+        badge.setObjectName("step-badge")
+        heading = QLabel(title)
+        heading.setObjectName("guide-card-title")
+        text = QLabel(body)
+        text.setObjectName("guide-card-body")
+        text.setWordWrap(True)
+        layout.addWidget(badge)
+        layout.addWidget(heading)
+        layout.addWidget(text)
+
+
 class TrainingWorker(QObject):
     """Run model training outside the GUI thread."""
 
@@ -162,6 +189,7 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self._build_design_tab(), "设计分析")
+        self.tabs.addTab(self._build_help_tab(), "使用说明")
         self.tabs.addTab(self._build_model_tab(), "模型评估")
         self.tabs.addTab(self._build_environment_tab(), "开发环境")
         layout.addWidget(self.tabs, 1)
@@ -255,6 +283,88 @@ class MainWindow(QMainWindow):
         right_layout.addWidget(trend_panel, 1)
         layout.addWidget(right, 1)
         return tab
+
+    def _build_help_tab(self) -> QScrollArea:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(10, 12, 10, 12)
+        layout.setSpacing(12)
+
+        intro = QFrame()
+        intro.setObjectName("guide-intro")
+        intro_layout = QVBoxLayout(intro)
+        intro_layout.setContentsMargins(20, 17, 20, 17)
+        intro_layout.setSpacing(6)
+        self.usage_title = QLabel("五步完成一次快速预测")
+        self.usage_title.setObjectName("guide-intro-title")
+        intro_text = QLabel(
+            "选择电机拓扑并填写客户参数，确认模型已就绪，然后点击“预测当前设计”。"
+            "右侧结果区会同时给出 AI 预测和解析公式基准。"
+        )
+        intro_text.setObjectName("guide-intro-text")
+        intro_text.setWordWrap(True)
+        intro_layout.addWidget(self.usage_title)
+        intro_layout.addWidget(intro_text)
+        layout.addWidget(intro)
+
+        steps = QGridLayout()
+        steps.setHorizontalSpacing(12)
+        steps.setVerticalSpacing(12)
+        self.guide_cards = [
+            GuideCard(
+                "STEP 01",
+                "选择电机拓扑",
+                "在“基础参数”上方选择 4极6槽、6极9槽、8极12槽、"
+                "8极18槽或10极12槽。拓扑决定极对数、槽数和绕组修正。",
+            ),
+            GuideCard(
+                "STEP 02",
+                "填写客户参数",
+                "基础页填写定子尺寸、气隙、磁钢、匝数、电流和转速。"
+                "点击“高级参数”可补充电流角、剩磁、电感、母线电压及机械结构。",
+            ),
+            GuideCard(
+                "STEP 03",
+                "确认模型状态",
+                "首次使用点击“一键训练模型”。训练在后台运行，完成后状态显示"
+                "“合成基线模型”或“FEA 校准模型”。",
+            ),
+            GuideCard(
+                "STEP 04",
+                "预测与查看趋势",
+                "点击“预测当前设计”查看转矩、脉动、效率及电压利用率；"
+                "在参数扫描区选择变量和目标，查看变化趋势。",
+            ),
+            GuideCard(
+                "STEP 05",
+                "检查结果可信度",
+                "模型评估页展示测试集误差。若提示超出训练功率或电压不可行，"
+                "仅可作为趋势参考，不应作为最终设计结论。",
+            ),
+            GuideCard(
+                "提示",
+                "便捷使用建议",
+                "客户通常只需修改基础页参数；高级参数保持推荐默认值即可快速完成"
+                "首轮方案筛选，再针对关注工况调整。",
+            ),
+        ]
+        for index, card in enumerate(self.guide_cards):
+            steps.addWidget(card, index // 2, index % 2)
+        layout.addLayout(steps)
+
+        notice = QLabel(
+            "数据边界：Maxwell/FEA 校准参考库尚未完成后，界面会明确显示"
+            "“合成基线模型”。合成数据用于方法演示和参数趋势，不能替代有限元、"
+            "样机测试或正式工程设计结论。"
+        )
+        notice.setObjectName("disclaimer")
+        notice.setWordWrap(True)
+        layout.addWidget(notice)
+        layout.addStretch(1)
+        scroll.setWidget(content)
+        return scroll
 
     def _build_input_panel(self) -> QFrame:
         panel = QFrame()
