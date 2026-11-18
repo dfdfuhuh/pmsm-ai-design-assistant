@@ -9,9 +9,9 @@ from pmsm_ai.domain import DEFAULT_DESIGN, SPM_TOPOLOGIES
 def test_reference_design_matches_documented_result() -> None:
     prediction = AnalyticalPMSMModel().evaluate(DEFAULT_DESIGN).prediction
 
-    assert prediction.torque_nm == pytest.approx(2.2919016951, rel=1e-8)
-    assert prediction.torque_ripple_pct == pytest.approx(4.2961620469, rel=1e-8)
-    assert prediction.efficiency_pct == pytest.approx(89.6643432431, rel=1e-8)
+    assert prediction.torque_nm == pytest.approx(2.2498451393, rel=1e-8)
+    assert prediction.torque_ripple_pct == pytest.approx(4.2925624597, rel=1e-8)
+    assert prediction.efficiency_pct == pytest.approx(89.8422258552, rel=1e-8)
 
 
 def test_torque_increases_with_current() -> None:
@@ -48,8 +48,20 @@ def test_topologies_change_frequency_and_ripple() -> None:
 
     assert results["spm_6p9s"].electrical_frequency_hz == 150
     assert results["spm_8p12s"].electrical_frequency_hz == 200
+    assert results["spm_8p18s"].electrical_frequency_hz == 200
     assert results["spm_10p12s"].electrical_frequency_hz == 250
     assert (
         results["spm_10p12s"].prediction.torque_ripple_pct
         < results["spm_8p12s"].prediction.torque_ripple_pct
     )
+
+
+def test_bus_voltage_changes_feasibility_without_changing_torque() -> None:
+    model = AnalyticalPMSMModel()
+    high_voltage = model.evaluate(DEFAULT_DESIGN.with_updates(dc_bus_voltage_v=400))
+    low_voltage = model.evaluate(DEFAULT_DESIGN.with_updates(dc_bus_voltage_v=60))
+
+    assert high_voltage.prediction.torque_nm == pytest.approx(
+        low_voltage.prediction.torque_nm
+    )
+    assert high_voltage.voltage_utilization_pct < low_voltage.voltage_utilization_pct

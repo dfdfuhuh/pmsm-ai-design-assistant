@@ -24,7 +24,7 @@ def test_generator_is_reproducible() -> None:
 def test_generator_respects_count_columns_and_power_envelope() -> None:
     frame = PMSMDesignDatasetGenerator().generate(70)
 
-    assert len(frame) == 210
+    assert len(frame) == 350
     assert tuple(frame.columns) == DATASET_COLUMNS
     assert not frame.isna().any().any()
     assert (frame["stator_outer_diameter_mm"] - frame["stator_inner_diameter_mm"] >= 30).all()
@@ -42,10 +42,10 @@ def test_committed_dataset_matches_metadata() -> None:
     frame = pd.read_csv(DEFAULT_DATASET_PATH)
     metadata = json.loads(DEFAULT_DATASET_METADATA_PATH.read_text(encoding="utf-8"))
 
-    assert len(frame) == 18000
-    assert metadata["sample_count"] == 18000
-    assert metadata["samples_per_topology"] == 6000
-    assert len(metadata["topologies"]) == 3
+    assert len(frame) == 25000
+    assert metadata["sample_count"] == 25000
+    assert metadata["samples_per_topology"] == 5000
+    assert len(metadata["topologies"]) == 5
     assert metadata["seed"] == 42
     assert hashlib.sha256(DEFAULT_DATASET_PATH.read_bytes()).hexdigest() == metadata[
         "dataset_sha256"

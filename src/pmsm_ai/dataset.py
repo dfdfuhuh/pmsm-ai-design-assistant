@@ -19,7 +19,7 @@ from pmsm_ai.domain import (
 )
 
 DATASET_VERSION = 2
-DEFAULT_SAMPLE_COUNT_PER_TOPOLOGY = 6000
+DEFAULT_SAMPLE_COUNT_PER_TOPOLOGY = 5000
 DEFAULT_SEED = 42
 TRAINING_POWER_RANGE_W = (300.0, 3500.0)
 
@@ -93,11 +93,11 @@ class PMSMDesignDatasetGenerator:
 
     @staticmethod
     def _design_from_array(values: np.ndarray, topology: str) -> PMSMDesign:
-        integer_index = RAW_COLUMNS.index("turns_per_phase")
         normalized = values.copy()
-        normalized[integer_index] = round(normalized[integer_index])
         parameters = dict(zip(RAW_COLUMNS, normalized.tolist(), strict=True))
-        parameters["turns_per_phase"] = int(parameters["turns_per_phase"])
+        for spec in PARAMETER_SPECS:
+            if spec.is_integer:
+                parameters[spec.name] = int(round(parameters[spec.name]))
         return PMSMDesign(topology=topology, **parameters)
 
 

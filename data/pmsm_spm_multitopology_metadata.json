@@ -3,6 +3,14 @@
   "motor_type": "surface-mounted PMSM",
   "topologies": [
     {
+      "key": "spm_4p6s",
+      "label": "表贴式 4极6槽",
+      "slots": 6,
+      "poles": 4,
+      "winding_factor": 0.866,
+      "ripple_factor": 1.18
+    },
+    {
       "key": "spm_6p9s",
       "label": "表贴式 6极9槽",
       "slots": 9,
@@ -19,6 +27,14 @@
       "ripple_factor": 1.0
     },
     {
+      "key": "spm_8p18s",
+      "label": "表贴式 8极18槽",
+      "slots": 18,
+      "poles": 8,
+      "winding_factor": 0.945,
+      "ripple_factor": 0.76
+    },
+    {
       "key": "spm_10p12s",
       "label": "表贴式 10极12槽",
       "slots": 12,
@@ -28,8 +44,8 @@
     }
   ],
   "seed": 42,
-  "samples_per_topology": 6000,
-  "sample_count": 18000,
+  "samples_per_topology": 5000,
+  "sample_count": 25000,
   "columns": [
     "topology",
     "stator_outer_diameter_mm",
@@ -37,12 +53,17 @@
     "stack_length_mm",
     "air_gap_mm",
     "magnet_thickness_mm",
+    "slot_opening_mm",
+    "rotor_yoke_thickness_mm",
+    "shaft_diameter_mm",
     "turns_per_phase",
     "rated_current_a",
     "current_angle_deg",
     "speed_rpm",
     "magnet_remanence_t",
     "phase_resistance_ohm",
+    "phase_inductance_mh",
+    "dc_bus_voltage_v",
     "torque_nm",
     "torque_ripple_pct",
     "efficiency_pct"
@@ -87,6 +108,24 @@
       "minimum": 2.0,
       "maximum": 6.0
     },
+    "slot_opening_mm": {
+      "label": "定子槽口宽",
+      "unit": "mm",
+      "minimum": 0.5,
+      "maximum": 3.0
+    },
+    "rotor_yoke_thickness_mm": {
+      "label": "转子轭厚",
+      "unit": "mm",
+      "minimum": 5.0,
+      "maximum": 18.0
+    },
+    "shaft_diameter_mm": {
+      "label": "转轴直径",
+      "unit": "mm",
+      "minimum": 8.0,
+      "maximum": 30.0
+    },
     "turns_per_phase": {
       "label": "每相串联匝数",
       "unit": "匝",
@@ -122,6 +161,18 @@
       "unit": "Ω",
       "minimum": 0.2,
       "maximum": 1.2
+    },
+    "phase_inductance_mh": {
+      "label": "相电感（Ld≈Lq）",
+      "unit": "mH",
+      "minimum": 0.05,
+      "maximum": 5.0
+    },
+    "dc_bus_voltage_v": {
+      "label": "逆变器母线电压",
+      "unit": "V",
+      "minimum": 24,
+      "maximum": 400
     }
   },
   "analytical_constants": {
@@ -131,5 +182,5 @@
     "winding_factor": 0.933,
     "lamination_density_kg_m3": 7600.0
   },
-  "dataset_sha256": "0512a996bb323041b2a19a3e1df561e0d2555fd9f34329d23a1e7cc310e12d43"
+  "dataset_sha256": "3918d9f2d1d10547f62b03ecaab36b796e3b049ddb460ef86f8f56af65441779"
 }

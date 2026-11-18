@@ -36,6 +36,17 @@ def test_unknown_topology_is_rejected() -> None:
         invalid.validate()
 
 
+def test_invalid_rotor_mechanical_stack_is_rejected() -> None:
+    invalid = replace(
+        DEFAULT_DESIGN,
+        shaft_diameter_mm=30.0,
+        rotor_yoke_thickness_mm=18.0,
+    )
+
+    with pytest.raises(ValueError, match="转子外径"):
+        invalid.validate()
+
+
 def test_updated_design_is_validated() -> None:
     updated = DEFAULT_DESIGN.with_updates(rated_current_a=8.0)
 

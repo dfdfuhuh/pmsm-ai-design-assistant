@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -54,10 +55,17 @@ BASIC_PARAMETER_NAMES = (
     "rated_current_a",
     "speed_rpm",
 )
-ADVANCED_PARAMETER_NAMES = (
+ADVANCED_ELECTRICAL_NAMES = (
     "current_angle_deg",
     "magnet_remanence_t",
     "phase_resistance_ohm",
+    "phase_inductance_mh",
+    "dc_bus_voltage_v",
+)
+ADVANCED_MECHANICAL_NAMES = (
+    "slot_opening_mm",
+    "rotor_yoke_thickness_mm",
+    "shaft_diameter_mm",
 )
 
 
@@ -158,7 +166,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._build_environment_tab(), "开发环境")
         layout.addWidget(self.tabs, 1)
 
-        footer = QLabel("Python · PyQt6 · OOP · Random Forest · 三种表贴式拓扑")
+        footer = QLabel("Python · PyQt6 · OOP · Random Forest · 五种表贴式拓扑")
         footer.setObjectName("footer")
         footer.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(footer)
@@ -176,7 +184,7 @@ class MainWindow(QMainWindow):
         eyebrow.setObjectName("eyebrow")
         title = QLabel("永磁同步电机 AI 设计助手")
         title.setObjectName("title")
-        subtitle = QLabel("6极9槽 / 8极12槽 / 10极12槽 · 多拓扑快速性能预测")
+        subtitle = QLabel("五种表贴式拓扑 · 客户参数快速性能预测")
         subtitle.setObjectName("subtitle")
         text_layout.addWidget(eyebrow)
         text_layout.addWidget(title)
@@ -251,18 +259,26 @@ class MainWindow(QMainWindow):
     def _build_input_panel(self) -> QFrame:
         panel = QFrame()
         panel.setObjectName("panel")
-        panel.setFixedWidth(390)
+        panel.setFixedWidth(430)
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(8)
+
+        input_scroll = QScrollArea()
+        input_scroll.setObjectName("input-scroll")
+        input_scroll.setWidgetResizable(True)
+        scroll_content = QWidget()
+        content_layout = QVBoxLayout(scroll_content)
+        content_layout.setContentsMargins(0, 0, 4, 0)
+        content_layout.setSpacing(8)
 
         title = QLabel("客户常用参数")
         title.setObjectName("section-title")
         caption = QLabel("先选择拓扑并填写额定设计点，复杂参数放在高级页。")
         caption.setObjectName("section-caption")
         caption.setWordWrap(True)
-        layout.addWidget(title)
-        layout.addWidget(caption)
+        content_layout.addWidget(title)
+        content_layout.addWidget(caption)
 
         topology_label = QLabel("电机拓扑")
         topology_label.setObjectName("field-label")
@@ -276,28 +292,49 @@ class MainWindow(QMainWindow):
         self.topology_description.setObjectName("section-caption")
         self.topology_description.setWordWrap(True)
         self.topology_combo.currentIndexChanged.connect(self._topology_changed)
-        layout.addWidget(topology_label)
-        layout.addWidget(self.topology_combo)
-        layout.addWidget(self.topology_description)
+        topology_row = QHBoxLayout()
+        topology_row.setSpacing(8)
+        topology_row.addWidget(topology_label)
+        topology_row.addWidget(self.topology_combo, 1)
+        content_layout.addLayout(topology_row)
+        content_layout.addWidget(self.topology_description)
 
         self.input_tabs = QTabWidget()
         self.input_tabs.setObjectName("input-tabs")
+        self.input_tabs.setMinimumHeight(300)
         basic_tab = QWidget()
         basic_form = self._build_parameter_form(BASIC_PARAMETER_NAMES)
         basic_tab.setLayout(basic_form)
         advanced_tab = QWidget()
-        advanced_form = self._build_parameter_form(ADVANCED_PARAMETER_NAMES)
-        advanced_tab.setLayout(advanced_form)
+        advanced_layout = QVBoxLayout(advanced_tab)
+        advanced_layout.setContentsMargins(4, 6, 4, 6)
+        advanced_layout.setSpacing(5)
+        electrical_title = QLabel("电气参数")
+        electrical_title.setObjectName("field-section-title")
+        mechanical_title = QLabel("机械结构参数")
+        mechanical_title.setObjectName("field-section-title")
+        advanced_layout.addWidget(electrical_title)
+        advanced_layout.addLayout(
+            self._build_parameter_form(ADVANCED_ELECTRICAL_NAMES)
+        )
+        advanced_layout.addSpacing(4)
+        advanced_layout.addWidget(mechanical_title)
+        advanced_layout.addLayout(
+            self._build_parameter_form(ADVANCED_MECHANICAL_NAMES)
+        )
+        advanced_layout.addStretch(1)
         self.input_tabs.addTab(basic_tab, "基础参数")
         self.input_tabs.addTab(advanced_tab, "高级参数")
-        layout.addWidget(self.input_tabs)
+        content_layout.addWidget(self.input_tabs)
 
         advanced_hint = QLabel(
-            "高级页：电流超前角、永磁体剩磁和相电阻。未修改时使用默认值。"
+            "高级页用于补充电气与机械结构数据；未修改时使用推荐默认值。"
         )
         advanced_hint.setObjectName("section-caption")
         advanced_hint.setWordWrap(True)
-        layout.addWidget(advanced_hint)
+        content_layout.addWidget(advanced_hint)
+        input_scroll.setWidget(scroll_content)
+        layout.addWidget(input_scroll, 1)
 
         self.validation_label = QLabel("")
         self.validation_label.setObjectName("warning")
@@ -321,7 +358,6 @@ class MainWindow(QMainWindow):
         self.predict_button = QPushButton("预测当前设计")
         self.predict_button.clicked.connect(self.predict_current_design)
         layout.addWidget(self.predict_button)
-        layout.addStretch(1)
         self._topology_changed()
         return panel
 
@@ -330,9 +366,9 @@ class MainWindow(QMainWindow):
         parameter_names: tuple[str, ...],
     ) -> QGridLayout:
         form = QGridLayout()
-        form.setContentsMargins(4, 8, 4, 8)
+        form.setContentsMargins(4, 4, 4, 4)
         form.setHorizontalSpacing(8)
-        form.setVerticalSpacing(8)
+        form.setVerticalSpacing(4)
         specs = {spec.name: spec for spec in PARAMETER_SPECS}
         for row, name in enumerate(parameter_names):
             spec = specs[name]
@@ -501,7 +537,14 @@ class MainWindow(QMainWindow):
             f"脉动 {delta_ripple:.3f} 个百分点、效率 {delta_efficiency:.3f} 个百分点。"
         )
         topology = next(item for item in SPM_TOPOLOGIES if item.key == design.topology)
-        summary = f"{topology.short_label}。" + summary
+        voltage_status = "满足" if report.voltage_feasible else "不满足"
+        summary = (
+            f"{topology.short_label}。"
+            + summary
+            + f" 相电压需求 {report.required_voltage_v:.1f} V"
+            f" / 可用 {report.maximum_phase_voltage_v:.1f} V"
+            f"（利用率 {report.voltage_utilization_pct:.1f}%，{voltage_status}）。"
+        )
         if report.outside_training_power_range:
             summary += " 当前工况超出 300–3500 W 训练覆盖范围，不建议解释模型结果。"
         return summary
@@ -590,7 +633,7 @@ class MainWindow(QMainWindow):
             self.model_status_label.setText("随机森林模型已加载，可进行预测与参数扫描。")
             metadata = bundle.training_metadata
             self.model_summary_label.setText(
-                f"三种拓扑共训练 {metadata['rows']} 条合成样本，"
+                f"{len(SPM_TOPOLOGIES)} 种拓扑共训练 {metadata['rows']} 条合成样本，"
                 f"{metadata['estimators']} 棵树，最大深度 {metadata['max_depth']}。"
                 "以下为各拓扑独立测试集指标；结果只验证对合成解析生成器的拟合。"
             )

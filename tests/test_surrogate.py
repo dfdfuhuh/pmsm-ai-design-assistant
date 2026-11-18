@@ -28,10 +28,12 @@ def test_model_bundle_round_trip(tmp_path: Path, tiny_bundle) -> None:
     loaded = ModelBundle.load(model_path)
 
     assert loaded.feature_names == tiny_bundle.feature_names
-    assert loaded.training_metadata["rows"] == 240
+    assert loaded.training_metadata["rows"] == 400
     assert set(loaded.topology_metrics) == {
+        "spm_4p6s",
         "spm_6p9s",
         "spm_8p12s",
+        "spm_8p18s",
         "spm_10p12s",
     }
 

@@ -22,6 +22,11 @@ _PARAMETER_LABELS = {
     "speed_rpm": "Speed (rpm)",
     "magnet_remanence_t": "Magnet remanence (T)",
     "phase_resistance_ohm": "Phase resistance (ohm)",
+    "phase_inductance_mh": "Phase inductance (mH)",
+    "dc_bus_voltage_v": "DC bus voltage (V)",
+    "slot_opening_mm": "Slot opening (mm)",
+    "rotor_yoke_thickness_mm": "Rotor yoke (mm)",
+    "shaft_diameter_mm": "Shaft diameter (mm)",
 }
 
 _OUTPUT_LABELS = {
@@ -42,12 +47,22 @@ _FEATURE_LABELS = {
     "speed_rpm": "Speed",
     "magnet_remanence_t": "Magnet remanence",
     "phase_resistance_ohm": "Phase resistance",
+    "phase_inductance_mh": "Phase inductance",
+    "dc_bus_voltage_v": "DC bus voltage",
+    "slot_opening_mm": "Slot opening",
+    "rotor_yoke_thickness_mm": "Rotor yoke",
+    "shaft_diameter_mm": "Shaft diameter",
     "airgap_flux_density_t": "Air-gap flux density",
     "pm_flux_linkage_wb": "PM flux linkage",
     "electrical_frequency_hz": "Electrical frequency",
     "mechanical_angular_speed_rad_s": "Mechanical speed",
+    "rotor_diameter_mm": "Rotor diameter",
+    "rotor_mass_kg": "Rotor mass",
+    "voltage_utilization_pct": "Voltage utilization",
+    "topology_spm_4p6s": "4P6S topology",
     "topology_spm_6p9s": "6P9S topology",
     "topology_spm_8p12s": "8P12S topology",
+    "topology_spm_8p18s": "8P18S topology",
     "topology_spm_10p12s": "10P12S topology",
 }
 

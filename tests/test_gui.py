@@ -15,7 +15,7 @@ def test_main_window_contains_three_workbench_tabs(qtbot, tiny_service) -> None:
     assert window.environment_output.isReadOnly()
     assert window.tabs.count() == 3
     assert window.input_tabs.count() == 2
-    assert window.topology_combo.count() == 3
+    assert window.topology_combo.count() == 5
     assert window.predict_button.isEnabled()
 
 
@@ -90,4 +90,4 @@ def test_one_click_training_worker_completes(qtbot, tmp_path) -> None:
     assert (tmp_path / "model.joblib").is_file()
     assert (tmp_path / "metrics.json").is_file()
     assert window.predict_button.isEnabled()
-    assert window.metrics_table.rowCount() == 9
+    assert window.metrics_table.rowCount() == 15

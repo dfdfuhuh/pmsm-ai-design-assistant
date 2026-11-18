@@ -24,6 +24,10 @@ class PredictionReport:
     analytical: PerformancePrediction
     analytical_power_w: float
     outside_training_power_range: bool
+    required_voltage_v: float
+    maximum_phase_voltage_v: float
+    voltage_utilization_pct: float
+    voltage_feasible: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +64,10 @@ class PredictionService:
             analytical=evaluation.prediction,
             analytical_power_w=evaluation.shaft_power_w,
             outside_training_power_range=outside,
+            required_voltage_v=evaluation.required_voltage_v,
+            maximum_phase_voltage_v=evaluation.maximum_phase_voltage_v,
+            voltage_utilization_pct=evaluation.voltage_utilization_pct,
+            voltage_feasible=evaluation.voltage_utilization_pct <= 100.0,
         )
 
     def scan(

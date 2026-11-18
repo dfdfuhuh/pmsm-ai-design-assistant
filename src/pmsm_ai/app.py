@@ -70,6 +70,11 @@ QLabel#field-label {
     color: #425a51;
     font-size: 12px;
 }
+QLabel#field-section-title {
+    color: #207f5e;
+    font-size: 12px;
+    font-weight: 700;
+}
 QLabel#field-unit {
     color: #82918b;
     font-size: 11px;
@@ -147,6 +152,10 @@ QSpinBox, QDoubleSpinBox, QComboBox {
     padding: 5px 7px;
     min-height: 20px;
 }
+QTabWidget#input-tabs QSpinBox, QTabWidget#input-tabs QDoubleSpinBox {
+    min-height: 16px;
+    padding: 2px 5px;
+}
 QComboBox::drop-down {
     border: none;
     width: 18px;
@@ -189,6 +198,10 @@ QPlainTextEdit {
     font-size: 12px;
 }
 QScrollArea {
+    border: none;
+    background: transparent;
+}
+QScrollArea#input-scroll {
     border: none;
     background: transparent;
 }
