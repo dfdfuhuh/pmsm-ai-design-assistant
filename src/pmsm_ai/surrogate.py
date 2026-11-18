@@ -23,7 +23,7 @@ from pmsm_ai.domain import (
     PMSMDesign,
 )
 
-MODEL_VERSION = 2
+MODEL_VERSION = 3
 MODEL_FEATURE_NAMES = RAW_COLUMNS + TOPOLOGY_FEATURE_NAMES + DERIVED_FEATURE_NAMES
 TARGET_LABELS = {
     "torque_nm": "转矩",
@@ -67,6 +67,9 @@ class ModelBundle:
     test_metrics: tuple[RegressionMetric, ...]
     topology_metrics: dict[str, tuple[RegressionMetric, ...]]
     training_metadata: dict[str, Any]
+    data_source: str
+    fea_library_sha256: str | None
+    fea_metrics: dict[str, Any]
     version: int = MODEL_VERSION
 
     def predict(self, design: PMSMDesign) -> PerformancePrediction:
@@ -99,6 +102,8 @@ class ModelBundle:
         loaded = joblib.load(path)
         if not isinstance(loaded, cls):
             raise ValueError("模型文件类型不正确，请重新训练")
+        if loaded.version != MODEL_VERSION:
+            raise ValueError("模型版本已更新，请重新训练")
         if loaded.feature_names != MODEL_FEATURE_NAMES:
             raise ValueError("模型特征顺序与当前代码不一致，请重新训练")
         if set(loaded.models) != set(OUTPUT_COLUMNS):
@@ -126,6 +131,9 @@ class RandomForestSurrogate:
         self,
         frame: pd.DataFrame,
         progress: Callable[[int, str], None] | None = None,
+        data_source: str = "synthetic analytical baseline",
+        fea_library_sha256: str | None = None,
+        fea_metrics: dict[str, Any] | None = None,
     ) -> ModelBundle:
         """Train and evaluate a model bundle on a tabular synthetic dataset."""
 
@@ -226,6 +234,9 @@ class RandomForestSurrogate:
                 "topologies": sorted(str(value) for value in frame["topology"].unique()),
                 "sklearn_version": sklearn.__version__,
             },
+            data_source=data_source,
+            fea_library_sha256=fea_library_sha256,
+            fea_metrics=fea_metrics or {},
         )
         self._report(progress, 100, "模型训练完成")
         return bundle

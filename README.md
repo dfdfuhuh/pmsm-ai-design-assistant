@@ -1,6 +1,6 @@
 # 永磁同步电机 AI 设计助手
 
-> 当前状态：五种表贴式 PMSM 拓扑的客户导向 AI 快速预测原型已实现。
+> 当前状态：五拓扑快速预测应用已实现；Maxwell 离线参考库工具已加入，但 FEA 校准尚未通过样板验证。
 
 本项目围绕永磁同步电机（PMSM）设计，提供基于 PyQt6 的交互式设计分析工具。客户选择常用表贴式槽极组合，填写基础电机参数，即可通过统一随机森林模型快速预测平均转矩、转矩脉动和效率。
 
@@ -21,6 +21,7 @@
 - GUI 单次预测、解析基准对照、参数扫描、测试指标和特征重要性。
 - 模型缺失时的一键后台训练，以及模型/数据损坏时的可恢复错误提示。
 - GUI、环境检查、后台训练和算法模块的自动化测试。
+- 100 点 Maxwell 采样计划、可中断续跑工具和 FEA 保留集校准接口。
 
 ## 快速开始
 
@@ -40,6 +41,20 @@ python -m pmsm_ai
 ```
 
 `scripts/generate_dataset.py` 使用固定种子 42，正常情况下会生成与提交文件一致的数据。
+
+## Maxwell 离线校准
+
+Maxwell/AEDT 是可选依赖，不会成为日常 GUI 启动的前置条件：
+
+```powershell
+python -m pip install -r requirements-fea.txt
+python scripts/build_fea_library.py --dry-run
+python scripts/build_fea_library.py --pilot
+python scripts/build_fea_library.py
+python scripts/calibrate_from_fea.py
+```
+
+当前样板验证尚卡在 4 极 6 槽的 RMxprt 槽型与绕组自动生成，尚未提交 FEA 结果库或 FEA 校准参数，因此当前应用仍明确使用合成解析数据。详细状态见 [FEA 工作流](docs/08-fea-workflow.md)。
 
 ## 验证
 
@@ -83,6 +98,7 @@ GUI 测试固定使用 `QT_QPA_PLATFORM=offscreen`，不要求桌面显示服务
 - [大模型协作记录](docs/05-ai-collaboration-log.md)
 - [环境报告](docs/06-environment-report.md)
 - [数据与模型卡](docs/07-model-card.md)
+- [Maxwell FEA 工作流](docs/08-fea-workflow.md)
 - [参考资料](docs/references.md)
 
 ## 使用边界

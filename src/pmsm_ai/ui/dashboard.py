@@ -423,6 +423,10 @@ class MainWindow(QMainWindow):
         self.model_summary_label.setObjectName("section-caption")
         self.model_summary_label.setWordWrap(True)
         layout.addWidget(self.model_summary_label)
+        self.fea_summary_label = QLabel("")
+        self.fea_summary_label.setObjectName("section-caption")
+        self.fea_summary_label.setWordWrap(True)
+        layout.addWidget(self.fea_summary_label)
 
         content = QHBoxLayout()
         self.metrics_table = QTableWidget(0, 4)
@@ -629,14 +633,25 @@ class MainWindow(QMainWindow):
         self.trend_button.setEnabled(ready)
         if ready:
             bundle = self.prediction_service.bundle
-            self.stage_label.setText("模型已就绪")
-            self.model_status_label.setText("随机森林模型已加载，可进行预测与参数扫描。")
+            self.stage_label.setText(
+                "FEA 校准模型" if bundle.fea_metrics else "合成基线模型"
+            )
+            self.model_status_label.setText(
+                "随机森林模型已加载，可进行预测与参数扫描。"
+                + (
+                    " 当前模型已使用 FEA 保留集校准。"
+                    if bundle.fea_metrics
+                    else " 当前结果仅基于合成解析数据。"
+                )
+            )
             metadata = bundle.training_metadata
             self.model_summary_label.setText(
-                f"{len(SPM_TOPOLOGIES)} 种拓扑共训练 {metadata['rows']} 条合成样本，"
+                f"{len(SPM_TOPOLOGIES)} 种拓扑共训练 {metadata['rows']} 条样本；"
+                f"数据来源：{bundle.data_source}。"
                 f"{metadata['estimators']} 棵树，最大深度 {metadata['max_depth']}。"
                 "以下为各拓扑独立测试集指标；结果只验证对合成解析生成器的拟合。"
             )
+            self.fea_summary_label.setText(self._format_fea_metrics(bundle.fea_metrics))
             self._populate_metrics(bundle)
             self.importance_canvas.plot_importance(bundle.feature_importances)
         else:
@@ -646,6 +661,7 @@ class MainWindow(QMainWindow):
             self.model_summary_label.setText(
                 "训练完成后展示独立测试集指标和平均特征重要性。"
             )
+            self.fea_summary_label.setText("FEA 校准：尚未训练模型")
             self.metrics_table.setRowCount(0)
             self.importance_canvas.show_placeholder()
             self.torque_card.clear_values("N·m")
@@ -673,6 +689,25 @@ class MainWindow(QMainWindow):
                     item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.metrics_table.setItem(row, column, item)
         self.metrics_table.resizeColumnsToContents()
+
+    @staticmethod
+    def _format_fea_metrics(metrics: dict[str, object]) -> str:
+        if not metrics:
+            return "FEA 独立保留集：当前模型尚未进行 FEA 校准。"
+        parts: list[str] = []
+        for topology in SPM_TOPOLOGIES:
+            topology_metrics = metrics.get(topology.key)
+            if not isinstance(topology_metrics, dict):
+                continue
+            torque = topology_metrics.get("torque_nm", {})
+            ripple = topology_metrics.get("torque_ripple_pct", {})
+            efficiency = topology_metrics.get("efficiency_pct", {})
+            parts.append(
+                f"{topology.short_label}：转矩 MAE {torque.get('mae', float('nan')):.3f} "
+                f"N·m，脉动 MAE {ripple.get('mae', float('nan')):.3f} 个百分点，"
+                f"效率 MAE {efficiency.get('mae', float('nan')):.3f} 个百分点"
+            )
+        return "FEA 独立保留集：" + "；".join(parts)
 
     def run_environment_check(self) -> list[EnvironmentCheck]:
         """Run checks and display a local dependency report."""
