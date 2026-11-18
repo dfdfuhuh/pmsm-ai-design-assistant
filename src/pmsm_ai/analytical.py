@@ -5,14 +5,17 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from pmsm_ai.domain import PerformancePrediction, PMSMDesign
+from pmsm_ai.domain import (
+    SPM_TOPOLOGIES,
+    PerformancePrediction,
+    PMSMDesign,
+    TopologySpec,
+    get_topology,
+)
 
-SLOT_COUNT = 12
-POLE_PAIRS = 4
 RELATIVE_PERMEABILITY = 1.05
 MAGNETIC_SATURATION_FACTOR = 1.15
 LAMINATION_STACKING_FACTOR = 0.95
-WINDING_FACTOR = 0.933
 LAMINATION_DENSITY_KG_M3 = 7600.0
 
 
@@ -38,16 +41,17 @@ class AnalyticalPMSMModel:
         """Evaluate one validated design at its steady-state operating point."""
 
         design.validate()
+        topology = get_topology(design.topology)
         airgap_flux_density = self._airgap_flux_density(design)
-        pm_flux_linkage = self._pm_flux_linkage(design, airgap_flux_density)
+        pm_flux_linkage = self._pm_flux_linkage(design, topology, airgap_flux_density)
         torque = (
             1.5
-            * POLE_PAIRS
+            * topology.pole_pairs
             * pm_flux_linkage
             * design.rated_current_a
             * math.cos(math.radians(design.current_angle_deg))
         )
-        electrical_frequency = POLE_PAIRS * design.speed_rpm / 60.0
+        electrical_frequency = topology.pole_pairs * design.speed_rpm / 60.0
         angular_speed = 2.0 * math.pi * design.speed_rpm / 60.0
         shaft_power = torque * angular_speed
         copper_loss = 3.0 * design.rated_current_a**2 * design.phase_resistance_ohm
@@ -55,7 +59,7 @@ class AnalyticalPMSMModel:
         mechanical_loss = 8e-7 * design.speed_rpm**2
         total_loss = copper_loss + core_loss + mechanical_loss
         efficiency = 100.0 * shaft_power / (shaft_power + total_loss)
-        ripple = self._torque_ripple(design, airgap_flux_density)
+        ripple = self._torque_ripple(design, topology.ripple_factor, airgap_flux_density)
 
         return AnalyticalEvaluation(
             prediction=PerformancePrediction(
@@ -80,6 +84,12 @@ class AnalyticalPMSMModel:
         features: dict[str, float] = design.to_dict()
         features.update(
             {
+                f"topology_{topology.key}": float(design.topology == topology.key)
+                for topology in SPM_TOPOLOGIES
+            }
+        )
+        features.update(
+            {
                 "airgap_flux_density_t": evaluation.airgap_flux_density_t,
                 "pm_flux_linkage_wb": evaluation.pm_flux_linkage_wb,
                 "electrical_frequency_hz": evaluation.electrical_frequency_hz,
@@ -97,17 +107,21 @@ class AnalyticalPMSMModel:
         return design.magnet_remanence_t * design.magnet_thickness_mm / denominator
 
     @staticmethod
-    def _pm_flux_linkage(design: PMSMDesign, airgap_flux_density: float) -> float:
+    def _pm_flux_linkage(
+        design: PMSMDesign,
+        topology: TopologySpec,
+        airgap_flux_density: float,
+    ) -> float:
         inner_radius_m = design.stator_inner_diameter_mm * 1e-3 / 2.0
         pole_area_m2 = (
             math.pi
             * inner_radius_m
-            / POLE_PAIRS
+            / topology.pole_pairs
             * design.stack_length_mm
             * 1e-3
         )
         return (
-            WINDING_FACTOR
+            topology.winding_factor
             * design.turns_per_phase
             * airgap_flux_density
             * pole_area_m2
@@ -137,7 +151,11 @@ class AnalyticalPMSMModel:
         return lamination_mass * specific_loss
 
     @staticmethod
-    def _torque_ripple(design: PMSMDesign, airgap_flux_density: float) -> float:
+    def _torque_ripple(
+        design: PMSMDesign,
+        ripple_factor: float,
+        airgap_flux_density: float,
+    ) -> float:
         ripple = (
             2.0
             + 1.4 * 3.0 / design.magnet_thickness_mm
@@ -145,7 +163,7 @@ class AnalyticalPMSMModel:
             + 0.02 * design.current_angle_deg
             + 0.2 * airgap_flux_density
         )
-        return max(ripple, 0.0)
+        return max(ripple * ripple_factor, 0.0)
 
 
 DERIVED_FEATURE_NAMES: tuple[str, ...] = (

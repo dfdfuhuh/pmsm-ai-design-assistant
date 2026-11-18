@@ -1,9 +1,37 @@
 {
-  "schema_version": 1,
-  "topology": "surface-mounted PMSM, 8 poles, 12 slots",
+  "schema_version": 2,
+  "motor_type": "surface-mounted PMSM",
+  "topologies": [
+    {
+      "key": "spm_6p9s",
+      "label": "表贴式 6极9槽",
+      "slots": 9,
+      "poles": 6,
+      "winding_factor": 0.866,
+      "ripple_factor": 1.08
+    },
+    {
+      "key": "spm_8p12s",
+      "label": "表贴式 8极12槽",
+      "slots": 12,
+      "poles": 8,
+      "winding_factor": 0.866,
+      "ripple_factor": 1.0
+    },
+    {
+      "key": "spm_10p12s",
+      "label": "表贴式 10极12槽",
+      "slots": 12,
+      "poles": 10,
+      "winding_factor": 0.933,
+      "ripple_factor": 0.82
+    }
+  ],
   "seed": 42,
-  "sample_count": 8000,
+  "samples_per_topology": 6000,
+  "sample_count": 18000,
   "columns": [
+    "topology",
     "stator_outer_diameter_mm",
     "stator_inner_diameter_mm",
     "stack_length_mm",
@@ -97,13 +125,11 @@
     }
   },
   "analytical_constants": {
-    "slots": 12,
-    "pole_pairs": 4,
     "relative_permeability": 1.05,
     "magnetic_saturation_factor": 1.15,
     "lamination_stacking_factor": 0.95,
     "winding_factor": 0.933,
     "lamination_density_kg_m3": 7600.0
   },
-  "dataset_sha256": "4e90541c565213bfc58fcf36c6ddc2701caa8208049a3b69a16d37393b9af024"
+  "dataset_sha256": "0512a996bb323041b2a19a3e1df561e0d2555fd9f34329d23a1e7cc310e12d43"
 }

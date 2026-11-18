@@ -15,7 +15,7 @@ from pmsm_ai.surrogate import RandomForestSurrogate, TrainingConfig  # noqa: E40
 def tiny_bundle():
     """Provide a fast real random-forest bundle for UI and service tests."""
 
-    frame = PMSMDesignDatasetGenerator(seed=7).generate(240)
+    frame = PMSMDesignDatasetGenerator(seed=7).generate(80)
     config = TrainingConfig(seed=7, estimators=20, max_depth=8, min_samples_leaf=3)
     return RandomForestSurrogate(config=config).train(frame)
 

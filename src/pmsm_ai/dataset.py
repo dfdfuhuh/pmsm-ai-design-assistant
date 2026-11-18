@@ -13,18 +13,19 @@ from pmsm_ai.analytical import AnalyticalPMSMModel
 from pmsm_ai.domain import (
     DEFAULT_DESIGN,
     PARAMETER_SPECS,
+    SPM_TOPOLOGIES,
     PerformancePrediction,
     PMSMDesign,
 )
 
-DATASET_VERSION = 1
-DEFAULT_SAMPLE_COUNT = 8000
+DATASET_VERSION = 2
+DEFAULT_SAMPLE_COUNT_PER_TOPOLOGY = 6000
 DEFAULT_SEED = 42
 TRAINING_POWER_RANGE_W = (300.0, 3500.0)
 
 RAW_COLUMNS = tuple(spec.name for spec in PARAMETER_SPECS)
 OUTPUT_COLUMNS = ("torque_nm", "torque_ripple_pct", "efficiency_pct")
-DATASET_COLUMNS = RAW_COLUMNS + OUTPUT_COLUMNS
+DATASET_COLUMNS = ("topology",) + RAW_COLUMNS + OUTPUT_COLUMNS
 
 
 class PMSMDesignDatasetGenerator:
@@ -38,69 +39,88 @@ class PMSMDesignDatasetGenerator:
         self.seed = seed
         self.analytical_model = analytical_model or AnalyticalPMSMModel()
 
-    def generate(self, count: int = DEFAULT_SAMPLE_COUNT) -> pd.DataFrame:
-        """Return exactly ``count`` valid and reproducible design samples."""
+    def generate(
+        self,
+        count_per_topology: int = DEFAULT_SAMPLE_COUNT_PER_TOPOLOGY,
+    ) -> pd.DataFrame:
+        """Return an equal, reproducible number of samples for every topology."""
 
-        if count <= 0:
+        if count_per_topology <= 0:
             raise ValueError("样本数量必须大于零")
 
-        rows: list[dict[str, float | int]] = []
-        attempt = 0
         lower = np.array([spec.minimum for spec in PARAMETER_SPECS], dtype=float)
         upper = np.array([spec.maximum for spec in PARAMETER_SPECS], dtype=float)
+        rows: list[dict[str, float | int | str]] = []
+        for topology_index, topology in enumerate(SPM_TOPOLOGIES):
+            topology_rows: list[dict[str, float | int | str]] = []
+            attempt = 0
+            while len(topology_rows) < count_per_topology:
+                remaining = count_per_topology - len(topology_rows)
+                batch_size = max(2048, remaining * 2)
+                sample_seed = self.seed + topology_index * 1000 + attempt
+                sampler = qmc.LatinHypercube(d=len(PARAMETER_SPECS), seed=sample_seed)
+                candidates = lower + sampler.random(batch_size) * (upper - lower)
+                for candidate in candidates:
+                    design = self._design_from_array(candidate, topology.key)
+                    try:
+                        design.validate()
+                    except ValueError:
+                        continue
 
-        while len(rows) < count:
-            batch_size = max(2048, (count - len(rows)) * 2)
-            sampler = qmc.LatinHypercube(d=len(PARAMETER_SPECS), seed=self.seed + attempt)
-            candidates = lower + sampler.random(batch_size) * (upper - lower)
-            for candidate in candidates:
-                design = self._design_from_array(candidate)
-                try:
-                    design.validate()
-                except ValueError:
-                    continue
+                    evaluation = self.analytical_model.evaluate(design)
+                    low_power, high_power = TRAINING_POWER_RANGE_W
+                    if not low_power <= evaluation.shaft_power_w <= high_power:
+                        continue
 
-                evaluation = self.analytical_model.evaluate(design)
-                low_power, high_power = TRAINING_POWER_RANGE_W
-                if not low_power <= evaluation.shaft_power_w <= high_power:
-                    continue
+                    row = asdict(design)
+                    row.update(asdict(evaluation.prediction))
+                    topology_rows.append(row)
+                    if len(topology_rows) == count_per_topology:
+                        break
 
-                row = asdict(design)
-                row.update(asdict(evaluation.prediction))
-                rows.append(row)
-                if len(rows) == count:
-                    break
-
-            attempt += 1
-            if attempt > 20:
-                raise RuntimeError("无法在约束范围内生成足够样本")
+                attempt += 1
+                if attempt > 20:
+                    raise RuntimeError(f"无法为 {topology.label} 生成足够样本")
+            rows.extend(topology_rows)
 
         return pd.DataFrame(rows, columns=DATASET_COLUMNS)
 
     @staticmethod
-    def reference_design() -> PMSMDesign:
+    def reference_design(topology: str = DEFAULT_DESIGN.topology) -> PMSMDesign:
         """Return the documented reference motor."""
 
-        return DEFAULT_DESIGN
+        return DEFAULT_DESIGN.with_updates(topology=topology)
 
     @staticmethod
-    def _design_from_array(values: np.ndarray) -> PMSMDesign:
+    def _design_from_array(values: np.ndarray, topology: str) -> PMSMDesign:
         integer_index = RAW_COLUMNS.index("turns_per_phase")
         normalized = values.copy()
         normalized[integer_index] = round(normalized[integer_index])
         parameters = dict(zip(RAW_COLUMNS, normalized.tolist(), strict=True))
         parameters["turns_per_phase"] = int(parameters["turns_per_phase"])
-        return PMSMDesign(**parameters)
+        return PMSMDesign(topology=topology, **parameters)
 
 
-def dataset_metadata(sample_count: int) -> dict[str, Any]:
+def dataset_metadata(samples_per_topology: int) -> dict[str, Any]:
     """Return stable metadata describing the committed dataset."""
 
     return {
         "schema_version": DATASET_VERSION,
-        "topology": "surface-mounted PMSM, 8 poles, 12 slots",
+        "motor_type": "surface-mounted PMSM",
+        "topologies": [
+            {
+                "key": topology.key,
+                "label": topology.label,
+                "slots": topology.slots,
+                "poles": topology.poles,
+                "winding_factor": topology.winding_factor,
+                "ripple_factor": topology.ripple_factor,
+            }
+            for topology in SPM_TOPOLOGIES
+        ],
         "seed": DEFAULT_SEED,
-        "sample_count": sample_count,
+        "samples_per_topology": samples_per_topology,
+        "sample_count": samples_per_topology * len(SPM_TOPOLOGIES),
         "columns": list(DATASET_COLUMNS),
         "outputs": list(OUTPUT_COLUMNS),
         "training_power_range_w": list(TRAINING_POWER_RANGE_W),
@@ -114,8 +134,6 @@ def dataset_metadata(sample_count: int) -> dict[str, Any]:
             for spec in PARAMETER_SPECS
         },
         "analytical_constants": {
-            "slots": 12,
-            "pole_pairs": 4,
             "relative_permeability": 1.05,
             "magnetic_saturation_factor": 1.15,
             "lamination_stacking_factor": 0.95,

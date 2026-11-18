@@ -47,6 +47,6 @@ python scripts/check_environment.py
 最终命令结果在环境搭建完成后由仓库测试补充：
 
 - [x] `python scripts/check_environment.py`：8/8 项通过
-- [x] `python -m pytest -q`：25 项测试通过
+- [x] `python -m pytest -q`：28 项测试通过
 - [x] `python -m ruff check .`：无问题
 - [x] PyQt 启动页在 offscreen 模式下完成显示与事件循环，并生成预览图

@@ -29,6 +29,11 @@ def test_model_bundle_round_trip(tmp_path: Path, tiny_bundle) -> None:
 
     assert loaded.feature_names == tiny_bundle.feature_names
     assert loaded.training_metadata["rows"] == 240
+    assert set(loaded.topology_metrics) == {
+        "spm_6p9s",
+        "spm_8p12s",
+        "spm_10p12s",
+    }
 
 
 def test_corrupt_model_file_is_rejected(tmp_path: Path) -> None:

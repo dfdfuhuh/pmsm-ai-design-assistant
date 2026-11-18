@@ -14,6 +14,8 @@ def test_main_window_contains_three_workbench_tabs(qtbot, tiny_service) -> None:
     assert window.check_button.text() == "检查开发环境"
     assert window.environment_output.isReadOnly()
     assert window.tabs.count() == 3
+    assert window.input_tabs.count() == 2
+    assert window.topology_combo.count() == 3
     assert window.predict_button.isEnabled()
 
 
@@ -25,8 +27,19 @@ def test_prediction_button_updates_metrics_and_trend(qtbot, tiny_service) -> Non
 
     assert "N·m" in window.torque_card.value_label.text()
     assert "公式基准" in window.torque_card.baseline_label.text()
+    assert "本次预测耗时" in window.prediction_message.text()
     assert "解析输出功率" in window.prediction_message.text()
     assert window.trend_canvas.figure.axes[0].lines
+
+
+def test_topology_selector_changes_design(qtbot, tiny_service) -> None:
+    window = MainWindow(prediction_service=tiny_service, auto_load_model=False)
+    qtbot.addWidget(window)
+    topology_index = window.topology_combo.findData("spm_10p12s")
+
+    window.topology_combo.setCurrentIndex(topology_index)
+
+    assert window.current_design().topology == "spm_10p12s"
 
 
 def test_environment_check_button_reports_results(qtbot, tiny_service) -> None:
@@ -77,3 +90,4 @@ def test_one_click_training_worker_completes(qtbot, tmp_path) -> None:
     assert (tmp_path / "model.joblib").is_file()
     assert (tmp_path / "metrics.json").is_file()
     assert window.predict_button.isEnabled()
+    assert window.metrics_table.rowCount() == 9

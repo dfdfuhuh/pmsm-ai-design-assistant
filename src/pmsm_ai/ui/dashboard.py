@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import perf_counter
 
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QCloseEvent
@@ -28,6 +29,7 @@ from PyQt6.QtWidgets import (
 from pmsm_ai.domain import (
     DEFAULT_DESIGN,
     PARAMETER_SPECS,
+    SPM_TOPOLOGIES,
     PMSMDesign,
 )
 from pmsm_ai.environment import EnvironmentCheck, all_checks_passed, collect_environment_checks
@@ -41,6 +43,22 @@ from pmsm_ai.surrogate import TARGET_LABELS, ModelBundle
 from pmsm_ai.training import train_and_save
 from pmsm_ai.ui.charts import ImportancePlotCanvas, TrendPlotCanvas
 from pmsm_ai.ui.widgets import MetricCard
+
+BASIC_PARAMETER_NAMES = (
+    "stator_outer_diameter_mm",
+    "stator_inner_diameter_mm",
+    "stack_length_mm",
+    "air_gap_mm",
+    "magnet_thickness_mm",
+    "turns_per_phase",
+    "rated_current_a",
+    "speed_rpm",
+)
+ADVANCED_PARAMETER_NAMES = (
+    "current_angle_deg",
+    "magnet_remanence_t",
+    "phase_resistance_ohm",
+)
 
 
 class TrainingWorker(QObject):
@@ -140,7 +158,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._build_environment_tab(), "开发环境")
         layout.addWidget(self.tabs, 1)
 
-        footer = QLabel("Python · PyQt6 · OOP · Random Forest · SPM 8极12槽")
+        footer = QLabel("Python · PyQt6 · OOP · Random Forest · 三种表贴式拓扑")
         footer.setObjectName("footer")
         footer.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(footer)
@@ -158,7 +176,7 @@ class MainWindow(QMainWindow):
         eyebrow.setObjectName("eyebrow")
         title = QLabel("永磁同步电机 AI 设计助手")
         title.setObjectName("title")
-        subtitle = QLabel("表贴式 8 极 12 槽 · 小功率伺服电机教学原型")
+        subtitle = QLabel("6极9槽 / 8极12槽 / 10极12槽 · 多拓扑快速性能预测")
         subtitle.setObjectName("subtitle")
         text_layout.addWidget(eyebrow)
         text_layout.addWidget(title)
@@ -233,43 +251,53 @@ class MainWindow(QMainWindow):
     def _build_input_panel(self) -> QFrame:
         panel = QFrame()
         panel.setObjectName("panel")
-        panel.setFixedWidth(360)
+        panel.setFixedWidth(390)
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(8)
 
-        title = QLabel("设计参数")
+        title = QLabel("客户常用参数")
         title.setObjectName("section-title")
-        caption = QLabel("固定拓扑：SPM 8 极 / 12 槽；参数为额定稳态点")
+        caption = QLabel("先选择拓扑并填写额定设计点，复杂参数放在高级页。")
         caption.setObjectName("section-caption")
         caption.setWordWrap(True)
         layout.addWidget(title)
         layout.addWidget(caption)
 
-        form = QGridLayout()
-        form.setHorizontalSpacing(8)
-        form.setVerticalSpacing(7)
-        for row, spec in enumerate(PARAMETER_SPECS):
-            label = QLabel(spec.label)
-            label.setObjectName("field-label")
-            if spec.is_integer:
-                control = QSpinBox()
-                control.setRange(int(spec.minimum), int(spec.maximum))
-                control.setSingleStep(1)
-            else:
-                control = QDoubleSpinBox()
-                control.setDecimals(spec.decimals)
-                control.setRange(spec.minimum, spec.maximum)
-                control.setSingleStep(spec.step)
-            control.setValue(getattr(DEFAULT_DESIGN, spec.name))
-            control.setMinimumWidth(110)
-            self.inputs[spec.name] = control
-            unit = QLabel(spec.unit)
-            unit.setObjectName("field-unit")
-            form.addWidget(label, row, 0)
-            form.addWidget(control, row, 1)
-            form.addWidget(unit, row, 2)
-        layout.addLayout(form)
+        topology_label = QLabel("电机拓扑")
+        topology_label.setObjectName("field-label")
+        self.topology_combo = QComboBox()
+        for topology in SPM_TOPOLOGIES:
+            self.topology_combo.addItem(topology.label, topology.key)
+        self.topology_combo.setCurrentIndex(
+            self.topology_combo.findData(DEFAULT_DESIGN.topology)
+        )
+        self.topology_description = QLabel("")
+        self.topology_description.setObjectName("section-caption")
+        self.topology_description.setWordWrap(True)
+        self.topology_combo.currentIndexChanged.connect(self._topology_changed)
+        layout.addWidget(topology_label)
+        layout.addWidget(self.topology_combo)
+        layout.addWidget(self.topology_description)
+
+        self.input_tabs = QTabWidget()
+        self.input_tabs.setObjectName("input-tabs")
+        basic_tab = QWidget()
+        basic_form = self._build_parameter_form(BASIC_PARAMETER_NAMES)
+        basic_tab.setLayout(basic_form)
+        advanced_tab = QWidget()
+        advanced_form = self._build_parameter_form(ADVANCED_PARAMETER_NAMES)
+        advanced_tab.setLayout(advanced_form)
+        self.input_tabs.addTab(basic_tab, "基础参数")
+        self.input_tabs.addTab(advanced_tab, "高级参数")
+        layout.addWidget(self.input_tabs)
+
+        advanced_hint = QLabel(
+            "高级页：电流超前角、永磁体剩磁和相电阻。未修改时使用默认值。"
+        )
+        advanced_hint.setObjectName("section-caption")
+        advanced_hint.setWordWrap(True)
+        layout.addWidget(advanced_hint)
 
         self.validation_label = QLabel("")
         self.validation_label.setObjectName("warning")
@@ -294,7 +322,50 @@ class MainWindow(QMainWindow):
         self.predict_button.clicked.connect(self.predict_current_design)
         layout.addWidget(self.predict_button)
         layout.addStretch(1)
+        self._topology_changed()
         return panel
+
+    def _build_parameter_form(
+        self,
+        parameter_names: tuple[str, ...],
+    ) -> QGridLayout:
+        form = QGridLayout()
+        form.setContentsMargins(4, 8, 4, 8)
+        form.setHorizontalSpacing(8)
+        form.setVerticalSpacing(8)
+        specs = {spec.name: spec for spec in PARAMETER_SPECS}
+        for row, name in enumerate(parameter_names):
+            spec = specs[name]
+            label = QLabel(spec.label)
+            label.setObjectName("field-label")
+            if spec.is_integer:
+                control = QSpinBox()
+                control.setRange(int(spec.minimum), int(spec.maximum))
+                control.setSingleStep(1)
+            else:
+                control = QDoubleSpinBox()
+                control.setDecimals(spec.decimals)
+                control.setRange(spec.minimum, spec.maximum)
+                control.setSingleStep(spec.step)
+            control.setValue(getattr(DEFAULT_DESIGN, spec.name))
+            control.setMinimumWidth(110)
+            self.inputs[spec.name] = control
+            unit = QLabel(spec.unit)
+            unit.setObjectName("field-unit")
+            form.addWidget(label, row, 0)
+            form.addWidget(control, row, 1)
+            form.addWidget(unit, row, 2)
+        form.setRowStretch(len(parameter_names), 1)
+        return form
+
+    def _topology_changed(self) -> None:
+        topology_key = str(self.topology_combo.currentData())
+        topology = next(item for item in SPM_TOPOLOGIES if item.key == topology_key)
+        self.topology_description.setText(
+            f"{topology.short_label} · {topology.pole_pairs} 对极。{topology.description}"
+        )
+        if hasattr(self, "validation_label"):
+            self.validation_label.setText("")
 
     def _build_model_tab(self) -> QWidget:
         tab = QWidget()
@@ -319,7 +390,7 @@ class MainWindow(QMainWindow):
 
         content = QHBoxLayout()
         self.metrics_table = QTableWidget(0, 4)
-        self.metrics_table.setHorizontalHeaderLabels(["目标", "R²", "MAE", "RMSE"])
+        self.metrics_table.setHorizontalHeaderLabels(["拓扑 / 目标", "R²", "MAE", "RMSE"])
         self.metrics_table.horizontalHeader().setStretchLastSection(True)
         self.metrics_table.verticalHeader().setVisible(False)
         self.metrics_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -359,7 +430,10 @@ class MainWindow(QMainWindow):
         for spec in PARAMETER_SPECS:
             control = self.inputs[spec.name]
             values[spec.name] = int(control.value()) if spec.is_integer else float(control.value())
-        design = PMSMDesign(**values)
+        design = PMSMDesign(
+            topology=str(self.topology_combo.currentData()),
+            **values,
+        )
         design.validate()
         return design
 
@@ -376,11 +450,18 @@ class MainWindow(QMainWindow):
             self.validation_label.setText(str(exc))
             return
 
+        started = perf_counter()
         report = self.prediction_service.predict(design)
-        self._display_prediction(report)
+        elapsed_ms = (perf_counter() - started) * 1000.0
+        self._display_prediction(report, design, elapsed_ms)
         self.update_trend()
 
-    def _display_prediction(self, report: PredictionReport) -> None:
+    def _display_prediction(
+        self,
+        report: PredictionReport,
+        design: PMSMDesign,
+        elapsed_ms: float,
+    ) -> None:
         self.torque_card.update_values(
             report.surrogate.torque_nm,
             report.analytical.torque_nm,
@@ -396,10 +477,16 @@ class MainWindow(QMainWindow):
             report.analytical.efficiency_pct,
             "%",
         )
-        self.prediction_message.setText(self._prediction_summary(report))
+        self.prediction_message.setText(
+            self._prediction_summary(report, design, elapsed_ms)
+        )
 
     @staticmethod
-    def _prediction_summary(report: PredictionReport) -> str:
+    def _prediction_summary(
+        report: PredictionReport,
+        design: PMSMDesign,
+        elapsed_ms: float,
+    ) -> str:
         delta_torque = abs(report.surrogate.torque_nm - report.analytical.torque_nm)
         delta_ripple = abs(
             report.surrogate.torque_ripple_pct - report.analytical.torque_ripple_pct
@@ -408,10 +495,13 @@ class MainWindow(QMainWindow):
             report.surrogate.efficiency_pct - report.analytical.efficiency_pct
         )
         summary = (
-            f"当前解析输出功率 {report.analytical_power_w:.0f} W；"
+            f"本次预测耗时 {elapsed_ms:.1f} ms；当前解析输出功率 "
+            f"{report.analytical_power_w:.0f} W；"
             f"代理模型与公式差值：转矩 {delta_torque:.3f} N·m、"
             f"脉动 {delta_ripple:.3f} 个百分点、效率 {delta_efficiency:.3f} 个百分点。"
         )
+        topology = next(item for item in SPM_TOPOLOGIES if item.key == design.topology)
+        summary = f"{topology.short_label}。" + summary
         if report.outside_training_power_range:
             summary += " 当前工况超出 300–3500 W 训练覆盖范围，不建议解释模型结果。"
         return summary
@@ -500,9 +590,9 @@ class MainWindow(QMainWindow):
             self.model_status_label.setText("随机森林模型已加载，可进行预测与参数扫描。")
             metadata = bundle.training_metadata
             self.model_summary_label.setText(
-                f"训练 {metadata['rows']} 条合成样本，"
+                f"三种拓扑共训练 {metadata['rows']} 条合成样本，"
                 f"{metadata['estimators']} 棵树，最大深度 {metadata['max_depth']}。"
-                "测试集指标如下；该结果只验证对合成解析生成器的拟合。"
+                "以下为各拓扑独立测试集指标；结果只验证对合成解析生成器的拟合。"
             )
             self._populate_metrics(bundle)
             self.importance_canvas.plot_importance(bundle.feature_importances)
@@ -520,14 +610,20 @@ class MainWindow(QMainWindow):
             self.efficiency_card.clear_values("%")
 
     def _populate_metrics(self, bundle: ModelBundle) -> None:
-        self.metrics_table.setRowCount(len(bundle.test_metrics))
-        for row, metric in enumerate(bundle.test_metrics):
-            values = (
-                TARGET_LABELS[metric.target],
-                f"{metric.r2:.4f}",
-                f"{metric.mae:.4f}",
-                f"{metric.rmse:.4f}",
-            )
+        rows: list[tuple[str, str, str, str]] = []
+        for topology in SPM_TOPOLOGIES:
+            metrics = bundle.topology_metrics.get(topology.key, bundle.test_metrics)
+            for metric in metrics:
+                rows.append(
+                    (
+                        f"{topology.short_label} / {TARGET_LABELS[metric.target]}",
+                        f"{metric.r2:.4f}",
+                        f"{metric.mae:.4f}",
+                        f"{metric.rmse:.4f}",
+                    )
+                )
+        self.metrics_table.setRowCount(len(rows))
+        for row, values in enumerate(rows):
             for column, value in enumerate(values):
                 item = QTableWidgetItem(value)
                 if column > 0:

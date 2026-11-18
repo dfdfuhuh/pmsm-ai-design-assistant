@@ -29,6 +29,13 @@ def test_out_of_range_parameter_is_rejected() -> None:
         invalid.validate()
 
 
+def test_unknown_topology_is_rejected() -> None:
+    invalid = replace(DEFAULT_DESIGN, topology="unknown")
+
+    with pytest.raises(ValueError, match="未知电机拓扑"):
+        invalid.validate()
+
+
 def test_updated_design_is_validated() -> None:
     updated = DEFAULT_DESIGN.with_updates(rated_current_a=8.0)
 

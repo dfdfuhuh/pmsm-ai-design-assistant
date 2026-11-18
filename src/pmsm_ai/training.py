@@ -43,6 +43,10 @@ def train_and_save(
         "training_metadata": bundle.training_metadata,
         "validation_metrics": [asdict(metric) for metric in bundle.validation_metrics],
         "test_metrics": [asdict(metric) for metric in bundle.test_metrics],
+        "topology_metrics": {
+            topology: [asdict(metric) for metric in metrics]
+            for topology, metrics in bundle.topology_metrics.items()
+        },
         "feature_importances": bundle.feature_importances,
         "training_power_range_w": list(TRAINING_POWER_RANGE_W),
     }

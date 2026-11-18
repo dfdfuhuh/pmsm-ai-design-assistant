@@ -17,10 +17,14 @@ from sklearn.model_selection import train_test_split
 
 from pmsm_ai.analytical import DERIVED_FEATURE_NAMES, AnalyticalPMSMModel
 from pmsm_ai.dataset import OUTPUT_COLUMNS, RAW_COLUMNS
-from pmsm_ai.domain import PerformancePrediction, PMSMDesign
+from pmsm_ai.domain import (
+    TOPOLOGY_FEATURE_NAMES,
+    PerformancePrediction,
+    PMSMDesign,
+)
 
-MODEL_VERSION = 1
-MODEL_FEATURE_NAMES = RAW_COLUMNS + DERIVED_FEATURE_NAMES
+MODEL_VERSION = 2
+MODEL_FEATURE_NAMES = RAW_COLUMNS + TOPOLOGY_FEATURE_NAMES + DERIVED_FEATURE_NAMES
 TARGET_LABELS = {
     "torque_nm": "转矩",
     "torque_ripple_pct": "转矩脉动",
@@ -61,6 +65,7 @@ class ModelBundle:
     feature_importances: dict[str, float]
     validation_metrics: tuple[RegressionMetric, ...]
     test_metrics: tuple[RegressionMetric, ...]
+    topology_metrics: dict[str, tuple[RegressionMetric, ...]]
     training_metadata: dict[str, Any]
     version: int = MODEL_VERSION
 
@@ -124,7 +129,7 @@ class RandomForestSurrogate:
     ) -> ModelBundle:
         """Train and evaluate a model bundle on a tabular synthetic dataset."""
 
-        required_columns = RAW_COLUMNS + OUTPUT_COLUMNS
+        required_columns = ("topology",) + RAW_COLUMNS + OUTPUT_COLUMNS
         missing = set(required_columns) - set(frame.columns)
         if missing:
             raise ValueError(f"训练数据缺少列：{', '.join(sorted(missing))}")
@@ -140,17 +145,20 @@ class RandomForestSurrogate:
             test_size=self.config.test_fraction,
             random_state=self.config.seed,
             shuffle=True,
+            stratify=frame["topology"],
         )
         validation_indices, test_indices = train_test_split(
             remaining_indices,
             test_size=0.50,
             random_state=self.config.seed,
             shuffle=True,
+            stratify=frame.iloc[remaining_indices]["topology"],
         )
 
         models: dict[str, RandomForestRegressor] = {}
         validation_metrics: list[RegressionMetric] = []
         test_metrics: list[RegressionMetric] = []
+        topology_metrics: dict[str, tuple[RegressionMetric, ...]] = {}
         importances: list[np.ndarray] = []
 
         for position, target in enumerate(OUTPUT_COLUMNS, start=1):
@@ -164,6 +172,7 @@ class RandomForestSurrogate:
                 n_jobs=-1,
             )
             model.fit(features[train_indices], targets[train_indices, position - 1])
+            model.set_params(n_jobs=1)
             validation_prediction = model.predict(features[validation_indices])
             test_prediction = model.predict(features[test_indices])
             validation_metrics.append(
@@ -179,6 +188,18 @@ class RandomForestSurrogate:
             models[target] = model
             importances.append(model.feature_importances_)
 
+        test_frame = frame.iloc[test_indices]
+        for topology in test_frame["topology"].unique():
+            topology_mask = (test_frame["topology"] == topology).to_numpy()
+            topology_metrics[str(topology)] = tuple(
+                self._metric(
+                    target,
+                    targets[test_indices[topology_mask], position],
+                    models[target].predict(features[test_indices[topology_mask]]),
+                )
+                for position, target in enumerate(OUTPUT_COLUMNS)
+            )
+
         mean_importance = np.mean(importances, axis=0)
         importance_map = {
             name: float(value)
@@ -192,6 +213,7 @@ class RandomForestSurrogate:
             feature_importances=importance_map,
             validation_metrics=tuple(validation_metrics),
             test_metrics=tuple(test_metrics),
+            topology_metrics=topology_metrics,
             training_metadata={
                 "seed": self.config.seed,
                 "estimators": self.config.estimators,
@@ -201,6 +223,7 @@ class RandomForestSurrogate:
                 "train_rows": len(train_indices),
                 "validation_rows": len(validation_indices),
                 "test_rows": len(test_indices),
+                "topologies": sorted(str(value) for value in frame["topology"].unique()),
                 "sklearn_version": sklearn.__version__,
             },
         )
@@ -209,10 +232,12 @@ class RandomForestSurrogate:
 
     def _build_feature_frame(self, frame: pd.DataFrame) -> np.ndarray:
         rows: list[list[float]] = []
-        for row in frame.loc[:, list(RAW_COLUMNS)].itertuples(index=False, name=None):
-            raw_values = dict(zip(RAW_COLUMNS, row, strict=True))
+        columns = ("topology",) + RAW_COLUMNS
+        for row in frame.loc[:, list(columns)].itertuples(index=False, name=None):
+            topology = str(row[0])
+            raw_values = dict(zip(RAW_COLUMNS, row[1:], strict=True))
             raw_values["turns_per_phase"] = int(raw_values["turns_per_phase"])
-            design = PMSMDesign(**raw_values)
+            design = PMSMDesign(topology=topology, **raw_values)
             design.validate()
             features = self.analytical_model.feature_dict(design)
             rows.append([features[name] for name in MODEL_FEATURE_NAMES])

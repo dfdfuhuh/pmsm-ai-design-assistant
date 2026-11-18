@@ -6,7 +6,7 @@ import hashlib
 import json
 
 from pmsm_ai.dataset import (
-    DEFAULT_SAMPLE_COUNT,
+    DEFAULT_SAMPLE_COUNT_PER_TOPOLOGY,
     PMSMDesignDatasetGenerator,
     dataset_metadata,
 )
@@ -14,7 +14,7 @@ from pmsm_ai.paths import DEFAULT_DATASET_METADATA_PATH, DEFAULT_DATASET_PATH
 
 
 def main() -> int:
-    frame = PMSMDesignDatasetGenerator().generate(DEFAULT_SAMPLE_COUNT)
+    frame = PMSMDesignDatasetGenerator().generate(DEFAULT_SAMPLE_COUNT_PER_TOPOLOGY)
     DEFAULT_DATASET_PATH.parent.mkdir(parents=True, exist_ok=True)
     frame.to_csv(
         DEFAULT_DATASET_PATH,
@@ -23,7 +23,7 @@ def main() -> int:
         lineterminator="\n",
     )
 
-    metadata = dataset_metadata(len(frame))
+    metadata = dataset_metadata(DEFAULT_SAMPLE_COUNT_PER_TOPOLOGY)
     metadata["dataset_sha256"] = hashlib.sha256(DEFAULT_DATASET_PATH.read_bytes()).hexdigest()
     DEFAULT_DATASET_METADATA_PATH.write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",

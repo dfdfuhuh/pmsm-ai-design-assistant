@@ -46,6 +46,9 @@ _FEATURE_LABELS = {
     "pm_flux_linkage_wb": "PM flux linkage",
     "electrical_frequency_hz": "Electrical frequency",
     "mechanical_angular_speed_rad_s": "Mechanical speed",
+    "topology_spm_6p9s": "6P9S topology",
+    "topology_spm_8p12s": "8P12S topology",
+    "topology_spm_10p12s": "10P12S topology",
 }
 
 

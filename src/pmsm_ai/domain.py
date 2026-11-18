@@ -1,4 +1,4 @@
-"""Validated design parameters for the fixed 8-pole/12-slot SPM topology."""
+"""Validated design parameters for three surface-mounted PMSM topologies."""
 
 from __future__ import annotations
 
@@ -23,6 +23,73 @@ class ParameterSpec:
         return 1.0 if self.is_integer else 10 ** (-self.decimals)
 
 
+@dataclass(frozen=True, slots=True)
+class TopologySpec:
+    """Fixed slot/pole data and analytical coefficients for one PMSM variant."""
+
+    key: str
+    label: str
+    slots: int
+    poles: int
+    winding_factor: float
+    ripple_factor: float
+    description: str
+
+    @property
+    def pole_pairs(self) -> int:
+        return self.poles // 2
+
+    @property
+    def short_label(self) -> str:
+        return f"{self.poles}极{self.slots}槽"
+
+
+SPM_TOPOLOGIES: tuple[TopologySpec, ...] = (
+    TopologySpec(
+        key="spm_6p9s",
+        label="表贴式 6极9槽",
+        slots=9,
+        poles=6,
+        winding_factor=0.866,
+        ripple_factor=1.08,
+        description="集中绕组方案，适合中低速伺服场景。",
+    ),
+    TopologySpec(
+        key="spm_8p12s",
+        label="表贴式 8极12槽",
+        slots=12,
+        poles=8,
+        winding_factor=0.866,
+        ripple_factor=1.00,
+        description="结构清晰，适合作为教学与通用基准。",
+    ),
+    TopologySpec(
+        key="spm_10p12s",
+        label="表贴式 10极12槽",
+        slots=12,
+        poles=10,
+        winding_factor=0.933,
+        ripple_factor=0.82,
+        description="高绕组系数方案，侧重较低转矩脉动。",
+    ),
+)
+TOPOLOGY_BY_KEY = {topology.key: topology for topology in SPM_TOPOLOGIES}
+TOPOLOGY_FEATURE_NAMES: tuple[str, ...] = tuple(
+    f"topology_{topology.key}" for topology in SPM_TOPOLOGIES
+)
+DEFAULT_TOPOLOGY_KEY = "spm_8p12s"
+
+
+def get_topology(key: str) -> TopologySpec:
+    """Return topology metadata or raise a user-facing validation error."""
+
+    try:
+        return TOPOLOGY_BY_KEY[key]
+    except KeyError as exc:
+        choices = "、".join(topology.label for topology in SPM_TOPOLOGIES)
+        raise ValueError(f"未知电机拓扑；可选值为：{choices}") from exc
+
+
 PARAMETER_SPECS: tuple[ParameterSpec, ...] = (
     ParameterSpec("stator_outer_diameter_mm", "定子外径", "mm", 80.0, 120.0, 1),
     ParameterSpec("stator_inner_diameter_mm", "定子内径", "mm", 45.0, 75.0, 1),
@@ -45,6 +112,7 @@ RAW_FEATURE_NAMES: tuple[str, ...] = tuple(spec.name for spec in PARAMETER_SPECS
 class PMSMDesign:
     """Input design and operating point for one SPM motor."""
 
+    topology: str
     stator_outer_diameter_mm: float
     stator_inner_diameter_mm: float
     stack_length_mm: float
@@ -62,6 +130,10 @@ class PMSMDesign:
 
         values = self.to_dict()
         errors: list[str] = []
+        try:
+            get_topology(self.topology)
+        except ValueError as exc:
+            errors.append(str(exc))
         for spec in PARAMETER_SPECS:
             value = values[spec.name]
             if not spec.minimum <= value <= spec.maximum:
@@ -93,6 +165,7 @@ class PMSMDesign:
 
 
 DEFAULT_DESIGN = PMSMDesign(
+    topology=DEFAULT_TOPOLOGY_KEY,
     stator_outer_diameter_mm=110.0,
     stator_inner_diameter_mm=65.0,
     stack_length_mm=40.0,
