@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pmsm-ai-design-assistant"
-version = "0.1.0"
+version = "0.2.0"
 description = "永磁同步电机 AI 设计助手课程项目预研骨架"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
@@ -12,6 +12,7 @@ dependencies = [
   "PyQt6>=6.7,<7",
   "numpy>=1.26,<3",
   "pandas>=2.2,<3",
+  "scipy>=1.10,<2",
   "scikit-learn>=1.5,<2",
   "matplotlib>=3.9,<4",
   "joblib>=1.4,<2",

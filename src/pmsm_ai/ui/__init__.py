@@ -1,5 +1,5 @@
 """Qt user-interface components."""
 
-from pmsm_ai.ui.main_window import MainWindow, SummaryCard
+from pmsm_ai.ui.dashboard import MainWindow
 
-__all__ = ["MainWindow", "SummaryCard"]
+__all__ = ["MainWindow"]

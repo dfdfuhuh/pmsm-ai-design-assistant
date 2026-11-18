@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "topology": "surface-mounted PMSM, 8 poles, 12 slots",
+  "seed": 42,
+  "sample_count": 8000,
+  "columns": [
+    "stator_outer_diameter_mm",
+    "stator_inner_diameter_mm",
+    "stack_length_mm",
+    "air_gap_mm",
+    "magnet_thickness_mm",
+    "turns_per_phase",
+    "rated_current_a",
+    "current_angle_deg",
+    "speed_rpm",
+    "magnet_remanence_t",
+    "phase_resistance_ohm",
+    "torque_nm",
+    "torque_ripple_pct",
+    "efficiency_pct"
+  ],
+  "outputs": [
+    "torque_nm",
+    "torque_ripple_pct",
+    "efficiency_pct"
+  ],
+  "training_power_range_w": [
+    300.0,
+    3500.0
+  ],
+  "parameter_ranges": {
+    "stator_outer_diameter_mm": {
+      "label": "定子外径",
+      "unit": "mm",
+      "minimum": 80.0,
+      "maximum": 120.0
+    },
+    "stator_inner_diameter_mm": {
+      "label": "定子内径",
+      "unit": "mm",
+      "minimum": 45.0,
+      "maximum": 75.0
+    },
+    "stack_length_mm": {
+      "label": "铁芯轴向长度",
+      "unit": "mm",
+      "minimum": 25.0,
+      "maximum": 55.0
+    },
+    "air_gap_mm": {
+      "label": "气隙长度",
+      "unit": "mm",
+      "minimum": 0.3,
+      "maximum": 0.8
+    },
+    "magnet_thickness_mm": {
+      "label": "永磁体厚度",
+      "unit": "mm",
+      "minimum": 2.0,
+      "maximum": 6.0
+    },
+    "turns_per_phase": {
+      "label": "每相串联匝数",
+      "unit": "匝",
+      "minimum": 40,
+      "maximum": 120
+    },
+    "rated_current_a": {
+      "label": "额定相电流 RMS",
+      "unit": "A",
+      "minimum": 2.0,
+      "maximum": 10.0
+    },
+    "current_angle_deg": {
+      "label": "电流超前角",
+      "unit": "°",
+      "minimum": 0.0,
+      "maximum": 30.0
+    },
+    "speed_rpm": {
+      "label": "转速",
+      "unit": "rpm",
+      "minimum": 1000.0,
+      "maximum": 4000.0
+    },
+    "magnet_remanence_t": {
+      "label": "永磁体剩磁",
+      "unit": "T",
+      "minimum": 0.95,
+      "maximum": 1.25
+    },
+    "phase_resistance_ohm": {
+      "label": "相电阻",
+      "unit": "Ω",
+      "minimum": 0.2,
+      "maximum": 1.2
+    }
+  },
+  "analytical_constants": {
+    "slots": 12,
+    "pole_pairs": 4,
+    "relative_permeability": 1.05,
+    "magnetic_saturation_factor": 1.15,
+    "lamination_stacking_factor": 0.95,
+    "winding_factor": 0.933,
+    "lamination_density_kg_m3": 7600.0
+  },
+  "dataset_sha256": "4e90541c565213bfc58fcf36c6ddc2701caa8208049a3b69a16d37393b9af024"
+}

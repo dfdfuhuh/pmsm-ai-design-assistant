@@ -10,7 +10,7 @@ from pathlib import Path
 from PyQt6.QtGui import QFont, QFontDatabase
 from PyQt6.QtWidgets import QApplication
 
-from pmsm_ai.ui.main_window import MainWindow
+from pmsm_ai.ui.dashboard import MainWindow
 
 _STYLE_SHEET = """
 QMainWindow, QWidget#page {
@@ -52,33 +52,57 @@ QLabel#disclaimer {
     padding: 11px 14px;
     font-size: 13px;
 }
-QFrame#card, QFrame#environment-panel {
+QFrame#panel, QFrame#environment-panel, QFrame#metric-card {
     background: #ffffff;
     border: 1px solid #dbe5df;
     border-radius: 14px;
 }
-QLabel#card-index {
-    color: #208662;
-    font-size: 12px;
-    font-weight: 700;
-}
-QLabel#card-title {
-    color: #173c31;
-    font-size: 17px;
-    font-weight: 700;
-}
-QLabel#card-body {
-    color: #5d7069;
-    font-size: 13px;
-}
 QLabel#section-title {
     color: #173c31;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
 }
 QLabel#section-caption, QLabel#footer {
     color: #6d7e78;
     font-size: 12px;
+}
+QLabel#field-label {
+    color: #425a51;
+    font-size: 12px;
+}
+QLabel#field-unit {
+    color: #82918b;
+    font-size: 11px;
+}
+QLabel#metric-caption {
+    color: #71837c;
+    font-size: 12px;
+    font-weight: 700;
+}
+QLabel#metric-value {
+    color: #173c31;
+    font-size: 25px;
+    font-weight: 700;
+}
+QLabel#metric-baseline, QLabel#prediction-message {
+    color: #657870;
+    font-size: 11px;
+}
+QLabel#prediction-message {
+    background: #eaf3ee;
+    border-radius: 8px;
+    padding: 9px 11px;
+}
+QLabel#model-status {
+    color: #267454;
+    background: #eef8f3;
+    border-radius: 7px;
+    padding: 7px 9px;
+    font-size: 11px;
+}
+QLabel#warning {
+    color: #a05017;
+    font-size: 11px;
 }
 QPushButton {
     color: #ffffff;
@@ -93,6 +117,67 @@ QPushButton:hover {
 }
 QPushButton:pressed {
     background: #11563e;
+}
+QPushButton:disabled {
+    color: #82918b;
+    background: #dce5e0;
+}
+QTabWidget::pane {
+    background: transparent;
+    border: none;
+}
+QTabBar::tab {
+    color: #60746c;
+    background: #e8efeb;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    padding: 8px 18px;
+    margin-right: 4px;
+    font-weight: 700;
+}
+QTabBar::tab:selected {
+    color: #ffffff;
+    background: #207f5e;
+}
+QSpinBox, QDoubleSpinBox, QComboBox {
+    color: #27453a;
+    background: #f8fbf9;
+    border: 1px solid #d5e2db;
+    border-radius: 6px;
+    padding: 5px 7px;
+    min-height: 20px;
+}
+QComboBox::drop-down {
+    border: none;
+    width: 18px;
+}
+QTableWidget {
+    color: #29453b;
+    background: #ffffff;
+    alternate-background-color: #f5f9f7;
+    border: 1px solid #dce7e1;
+    border-radius: 8px;
+    gridline-color: #e7eee9;
+}
+QHeaderView::section {
+    color: #3f5d51;
+    background: #e9f2ed;
+    border: none;
+    padding: 7px;
+    font-weight: 700;
+}
+QProgressBar {
+    color: #173c31;
+    background: #e1ebe5;
+    border: none;
+    border-radius: 5px;
+    height: 10px;
+    text-align: center;
+    font-size: 10px;
+}
+QProgressBar::chunk {
+    background: #2a936c;
+    border-radius: 5px;
 }
 QPlainTextEdit {
     color: #29453b;

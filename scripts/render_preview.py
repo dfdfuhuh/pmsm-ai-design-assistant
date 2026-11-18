@@ -12,20 +12,32 @@ from pmsm_ai.ui.main_window import MainWindow  # noqa: E402
 
 
 def main() -> int:
-    output = Path(__file__).resolve().parents[1] / "docs" / "images" / "launch-page.png"
-    output.parent.mkdir(parents=True, exist_ok=True)
+    output_directory = Path(__file__).resolve().parents[1] / "docs" / "images"
+    output_directory.mkdir(parents=True, exist_ok=True)
+    design_output = output_directory / "launch-page.png"
+    model_output = output_directory / "model-evaluation.png"
 
     application = create_application([])
     window = MainWindow()
     window.show()
     application.processEvents()
+    if window.prediction_service is not None:
+        window.predict_current_design()
+        application.processEvents()
 
-    if not window.grab().save(str(output), "PNG"):
-        print(f"无法保存预览：{output}")
+    if not window.grab().save(str(design_output), "PNG"):
+        print(f"无法保存预览：{design_output}")
+        return 1
+
+    window.tabs.setCurrentIndex(1)
+    application.processEvents()
+    if not window.grab().save(str(model_output), "PNG"):
+        print(f"无法保存预览：{model_output}")
         return 1
 
     window.close()
-    print(f"启动页预览已保存：{output}")
+    print(f"设计页预览已保存：{design_output}")
+    print(f"模型评估页预览已保存：{model_output}")
     return 0
 
 
