@@ -464,12 +464,17 @@ class MainWindow(QMainWindow):
         topology_row.addWidget(self.topology_combo, 1)
         content_layout.addLayout(topology_row)
         content_layout.addWidget(self.topology_description)
+        self.frequency_label = QLabel("")
+        self.frequency_label.setObjectName("derived-value")
+        self.frequency_label.setWordWrap(True)
+        content_layout.addWidget(self.frequency_label)
 
         self.input_tabs = QTabWidget()
         self.input_tabs.setObjectName("input-tabs")
         self.input_tabs.setMinimumHeight(300)
         basic_tab = QWidget()
         basic_form = self._build_parameter_form(BASIC_PARAMETER_NAMES)
+        self.inputs["speed_rpm"].valueChanged.connect(self._update_frequency)
         basic_tab.setLayout(basic_form)
         advanced_tab = QWidget()
         advanced_layout = QVBoxLayout(advanced_tab)
@@ -575,8 +580,23 @@ class MainWindow(QMainWindow):
         self.topology_description.setText(
             f"{topology.short_label} · {topology.pole_pairs} 对极。{topology.description}"
         )
+        self._update_frequency()
         if hasattr(self, "validation_label"):
             self.validation_label.setText("")
+
+    def _update_frequency(self, *_args: object) -> None:
+        """Show electrical frequency as a read-only derived quantity."""
+
+        if not hasattr(self, "frequency_label") or "speed_rpm" not in self.inputs:
+            return
+        topology_key = str(self.topology_combo.currentData())
+        topology = next(item for item in SPM_TOPOLOGIES if item.key == topology_key)
+        speed_rpm = int(self.inputs["speed_rpm"].value())
+        electrical_frequency_hz = topology.pole_pairs * speed_rpm / 60.0
+        self.frequency_label.setText(
+            f"自动计算电频率：fe = p×n/60 = {topology.pole_pairs}×{speed_rpm}/60 "
+            f"= {electrical_frequency_hz:.1f} Hz"
+        )
 
     def _build_model_tab(self) -> QWidget:
         tab = QWidget()

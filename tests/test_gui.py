@@ -21,6 +21,8 @@ def test_main_window_contains_three_workbench_tabs(qtbot, tiny_service) -> None:
     assert window.input_tabs.count() == 2
     assert window.topology_combo.count() == 5
     assert window.predict_button.isEnabled()
+    assert "自动计算电频率" in window.frequency_label.text()
+    assert "200.0 Hz" in window.frequency_label.text()
     assert "最大深度" not in window.model_summary_label.text()
     assert "棵树" not in window.model_summary_label.text()
     assert "拟合优度" in window.metrics_table.horizontalHeaderItem(1).text()
@@ -77,6 +79,10 @@ def test_topology_selector_changes_design(qtbot, tiny_service) -> None:
     window.topology_combo.setCurrentIndex(topology_index)
 
     assert window.current_design().topology == "spm_10p12s"
+    assert "250.0 Hz" in window.frequency_label.text()
+
+    window.inputs["speed_rpm"].setValue(1800)
+    assert "150.0 Hz" in window.frequency_label.text()
 
 
 def test_environment_check_button_reports_results(qtbot, tiny_service) -> None:

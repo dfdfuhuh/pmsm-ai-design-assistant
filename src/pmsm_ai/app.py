@@ -107,6 +107,14 @@ QLabel#trend-status, QLabel#design-relation {
     padding: 7px 9px;
     font-size: 11px;
 }
+QLabel#derived-value {
+    color: #1f6d50;
+    background: #edf7f2;
+    border: 1px solid #d5e9df;
+    border-radius: 7px;
+    padding: 6px 9px;
+    font-size: 11px;
+}
 QLabel#metrics-help {
     color: #526a60;
     background: #f3f8f5;

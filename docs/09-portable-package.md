@@ -8,8 +8,8 @@
 D:\CODES\PMSM-AI-Design-Assistant-portable.zip
 ```
 
-- 大小：207,481,691 字节，约 197.9 MiB
-- SHA-256：`1f7d20ff458869adf18b9f0c87eabf4ea9c21b7f03c25e013fbf2af51d5ee917`
+- 大小：207,481,687 字节，约 197.9 MiB
+- SHA-256：`ad2526fd162cf891994852effbb4709705b1d5ed693c9a58e819b2db5f64cd06`
 - 解压后文件数：2235
 - 内置模型：85.3 MiB
 
@@ -45,6 +45,7 @@ python scripts/build_portable.py
 - 内置随机森林模型成功加载。
 - 参数趋势页同时展示解析公式实线和 AI 代理虚线；不可行点与训练域外点以断点显示。
 - 模型评估页提供 R²、MAE、RMSE 的中文定义、单位和适用范围说明。
+- 基础参数页根据拓扑和转速自动显示电频率，不需要客户重复输入。
 
 ## 限制
 
