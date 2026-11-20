@@ -71,6 +71,29 @@ def test_trend_axes_show_full_range_for_flat_output(qtbot, tiny_service) -> None
     assert "转矩脉动" in axes.get_ylabel()
 
 
+def test_trend_labels_ai_nodes_at_major_ticks(qtbot, tiny_service) -> None:
+    window = MainWindow(prediction_service=tiny_service, auto_load_model=False)
+    qtbot.addWidget(window)
+    window.topology_combo.setCurrentIndex(
+        window.topology_combo.findData("spm_4p6s")
+    )
+    window.trend_parameter_combo.setCurrentIndex(
+        window.trend_parameter_combo.findData("speed_rpm")
+    )
+    window.trend_output_combo.setCurrentIndex(
+        window.trend_output_combo.findData("efficiency_pct")
+    )
+
+    window.update_trend()
+
+    labels = [
+        text for text in window.trend_canvas.figure.axes[0].texts
+        if text.get_fontsize() == 7
+    ]
+    assert len(labels) == 6
+    assert all(text.get_text().replace(".", "", 1).isdigit() for text in labels)
+
+
 def test_topology_selector_changes_design(qtbot, tiny_service) -> None:
     window = MainWindow(prediction_service=tiny_service, auto_load_model=False)
     qtbot.addWidget(window)

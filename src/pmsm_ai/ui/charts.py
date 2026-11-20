@@ -44,6 +44,12 @@ _OUTPUT_LABELS = {
     "efficiency_pct": ("效率 (%)", "#2377a8"),
 }
 
+_POINT_LABEL_FORMATS = {
+    "torque_nm": ".2f",
+    "torque_ripple_pct": ".2f",
+    "efficiency_pct": ".1f",
+}
+
 _FEATURE_LABELS = {
     "stator_outer_diameter_mm": "定子外径",
     "stator_inner_diameter_mm": "定子内径",
@@ -178,9 +184,62 @@ class TrendPlotCanvas(FigureCanvasQTAgg):
             axes.set_ylim(0.0, 100.0)
         else:
             axes.set_ylim(0.0, max(1.0, maximum * 1.15))
+        self._annotate_ai_nodes(axes, series, x_values, ai_values)
         axes.legend(loc="best", fontsize=8, frameon=False)
         self.figure.subplots_adjust(left=0.13, right=0.98, bottom=0.22, top=0.95)
         self.draw_idle()
+
+    @staticmethod
+    def _annotate_ai_nodes(
+        axes: object,
+        series: TrendSeries,
+        x_values: np.ndarray,
+        ai_values: np.ndarray,
+    ) -> None:
+        """Label AI nodes nearest to major x ticks without cluttering the chart."""
+
+        x_min = float(x_values.min())
+        x_max = float(x_values.max())
+        tolerance = max((x_max - x_min) * 0.025, 0.5)
+        number_format = _POINT_LABEL_FORMATS[series.output]
+        finite_indices = np.flatnonzero(np.isfinite(ai_values))
+        for tick in axes.get_xticks():
+            if not x_min <= tick <= x_max or finite_indices.size == 0:
+                continue
+            nearest = min(
+                (int(index) for index in finite_indices),
+                key=lambda index: abs(float(x_values[index]) - float(tick)),
+            )
+            if abs(float(x_values[nearest]) - float(tick)) > tolerance:
+                continue
+            x_value = float(x_values[nearest])
+            y_value = float(ai_values[nearest])
+            if x_value - x_min < tolerance:
+                horizontal_alignment = "left"
+                offset = (4, 5)
+            elif x_max - x_value < tolerance:
+                horizontal_alignment = "right"
+                offset = (-4, 5)
+            else:
+                horizontal_alignment = "center"
+                offset = (0, 5)
+            axes.annotate(
+                format(y_value, number_format),
+                (x_value, y_value),
+                xytext=offset,
+                textcoords="offset points",
+                ha=horizontal_alignment,
+                va="bottom",
+                fontsize=7,
+                color="#245b76",
+                clip_on=False,
+                bbox={
+                    "boxstyle": "round,pad=0.12",
+                    "facecolor": "white",
+                    "edgecolor": "none",
+                    "alpha": 0.78,
+                },
+            )
 
 
 class ImportancePlotCanvas(FigureCanvasQTAgg):
