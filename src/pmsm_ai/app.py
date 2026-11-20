@@ -100,6 +100,26 @@ QLabel#section-caption, QLabel#footer {
     color: #6d7e78;
     font-size: 12px;
 }
+QLabel#trend-status, QLabel#design-relation {
+    color: #286d54;
+    background: #eef8f3;
+    border-radius: 7px;
+    padding: 7px 9px;
+    font-size: 11px;
+}
+QLabel#metrics-help {
+    color: #526a60;
+    background: #f3f8f5;
+    border: 1px solid #dce8e1;
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 11px;
+}
+QLabel#relation-text {
+    color: #425a51;
+    font-size: 12px;
+    line-height: 1.4;
+}
 QLabel#field-label {
     color: #425a51;
     font-size: 12px;

@@ -32,12 +32,33 @@ class PredictionReport:
 
 @dataclass(frozen=True, slots=True)
 class TrendSeries:
-    """One parameter-scan curve for a selected output."""
+    """One parameter-scan curve plus its validity and training-envelope masks."""
 
     parameter: str
     output: str
     x_values: tuple[float, ...]
     y_values: tuple[float | None, ...]
+    analytical_y_values: tuple[float | None, ...] = ()
+    design_valid: tuple[bool, ...] = ()
+    training_covered: tuple[bool, ...] = ()
+
+    @property
+    def analytical_values(self) -> tuple[float | None, ...]:
+        """Return the formula series, falling back to the legacy series."""
+
+        return self.analytical_y_values or self.y_values
+
+    @property
+    def ai_point_count(self) -> int:
+        """Number of AI points that remain inside the training envelope."""
+
+        return sum(value is not None for value in self.y_values)
+
+    @property
+    def formula_point_count(self) -> int:
+        """Number of valid analytical points."""
+
+        return sum(value is not None for value in self.analytical_values)
 
 
 class PredictionService:
@@ -93,22 +114,37 @@ class PredictionService:
 
         x_values: list[float] = []
         y_values: list[float | None] = []
+        analytical_y_values: list[float | None] = []
+        design_valid: list[bool] = []
+        training_covered: list[bool] = []
         for value in raw_values:
             update_value = int(value) if spec.is_integer else float(value)
             try:
                 candidate = design.with_updates(**{parameter: update_value})
-                report = self.predict(candidate)
             except ValueError:
-                continue
-            x_values.append(float(value))
-            if report.outside_training_power_range:
+                x_values.append(float(value))
                 y_values.append(None)
-            else:
-                y_values.append(float(getattr(report.surrogate, output)))
+                analytical_y_values.append(None)
+                design_valid.append(False)
+                training_covered.append(False)
+                continue
+            report = self.predict(candidate)
+            x_values.append(float(value))
+            analytical_y_values.append(float(getattr(report.analytical, output)))
+            design_valid.append(True)
+            training_covered.append(not report.outside_training_power_range)
+            y_values.append(
+                None
+                if report.outside_training_power_range
+                else float(getattr(report.surrogate, output))
+            )
 
         return TrendSeries(
             parameter=parameter,
             output=output,
             x_values=tuple(x_values),
             y_values=tuple(y_values),
+            analytical_y_values=tuple(analytical_y_values),
+            design_valid=tuple(design_valid),
+            training_covered=tuple(training_covered),
         )

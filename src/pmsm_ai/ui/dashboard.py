@@ -39,7 +39,7 @@ from pmsm_ai.paths import (
     DEFAULT_METRICS_PATH,
     DEFAULT_MODEL_PATH,
 )
-from pmsm_ai.service import PredictionReport, PredictionService
+from pmsm_ai.service import PredictionReport, PredictionService, TrendSeries
 from pmsm_ai.surrogate import TARGET_LABELS, ModelBundle
 from pmsm_ai.training import train_and_save
 from pmsm_ai.ui.charts import ImportancePlotCanvas, TrendPlotCanvas
@@ -66,6 +66,39 @@ ADVANCED_MECHANICAL_NAMES = (
     "slot_opening_mm",
     "rotor_yoke_thickness_mm",
     "shaft_diameter_mm",
+)
+
+PARAMETER_TOOLTIPS = {
+    "stator_outer_diameter_mm": "决定定子铁芯外径；外径与内径之差应不小于 30 mm。",
+    "stator_inner_diameter_mm": "与气隙共同决定转子外径，并通过极距面积影响永磁磁链和转矩。",
+    "stack_length_mm": "铁芯越长，永磁磁链和输出功率通常越大，同时铁芯质量也会增加。",
+    "air_gap_mm": "气隙增大会降低气隙磁密和转矩；转子外径按“定子内径−2×气隙”计算。",
+    "magnet_thickness_mm": "磁钢厚度影响工作点磁密、永磁磁链和转矩脉动经验项。",
+    "turns_per_phase": "每相串联匝数通过永磁磁链影响转矩。修改绕组后，应同步核对相电阻和相电感。",
+    "rated_current_a": "稳态 dq 模型中的电流幅值；转矩近似与电流成正比，铜耗与电流平方成正比。",
+    "speed_rpm": "电频率 fe=p×n/60；转速改变机械角速度、铁耗和机械耗。",
+    "current_angle_deg": "电流超前角 β 使转矩包含 cosβ，并改变 dq 电压和脉动经验项。",
+    "magnet_remanence_t": "永磁材料剩磁，是气隙磁密和永磁磁链的磁源参数。",
+    "phase_resistance_ohm": "相电阻决定铜耗 3I²R，并通过 dq 电压方程影响电压利用率。",
+    "phase_inductance_mh": "相电感主要影响 dq 电压需求；当前降阶模型不据此改变平均转矩。",
+    "dc_bus_voltage_v": "母线电压只用于相电压可行性和电压利用率检查，不直接改变平均转矩。",
+    "slot_opening_mm": "槽口宽改变等效气隙与漏磁修正，并影响转矩脉动经验项。",
+    "rotor_yoke_thickness_mm": "轭厚用于漏磁修正和机械空间校验；过厚会挤压转子可用径向空间。",
+    "shaft_diameter_mm": "轴径影响转子质量与机械损耗；不参与平均转矩公式。",
+}
+
+PARAMETER_RELATION_HELP = (
+    "基础参数→高级参数的公式链：\n"
+    "1. 拓扑决定极对数 p、槽数和绕组/脉动修正系数；电频率 fe=p×n/60。\n"
+    "2. 转子外径 D_r=D_si−2g；机械约束为 D_shaft+2h_yoke<D_r；"
+    "定子径向厚度 (D_so−D_si)/2 至少为 15 mm。\n"
+    "3. 气隙磁密 Bδ由剩磁 Br、磁钢厚度 hm、气隙 g、槽口宽和轭厚修正共同决定。\n"
+    "4. 永磁磁链 ψf由 Bδ、定子内径、铁芯长度、每相匝数、绕组系数和叠片系数计算。\n"
+    "5. 平均转矩 T≈1.5pψfI cosβ；机械功率 P=Tω；"
+    "效率 η=P/(P+P铜+P铁+P机械)。\n"
+    "6. 相电阻 R 影响铜耗；相电感 L、母线电压 Vdc 与 R、ψf、β、转速共同决定 dq 电压需求。\n"
+    "提醒：相电阻和相电感是当前设计点的独立高级输入，不会仅凭匝数自动重算；"
+    "更换绕组或尺寸后，应根据样品、供应商数据或 FEA 同步更新。"
 )
 
 
@@ -278,8 +311,19 @@ class MainWindow(QMainWindow):
         trend_header.addWidget(self.trend_button)
         trend_layout.addLayout(trend_header)
 
+        self.trend_help_label = QLabel(
+            "实线为解析公式趋势，虚线为 AI 代理预测。断点表示几何不可行或超出训练功率范围。"
+        )
+        self.trend_help_label.setObjectName("section-caption")
+        self.trend_help_label.setWordWrap(True)
+        trend_layout.addWidget(self.trend_help_label)
+
         self.trend_canvas = TrendPlotCanvas()
         trend_layout.addWidget(self.trend_canvas)
+        self.trend_status_label = QLabel("生成趋势后会显示有效点和训练覆盖情况。")
+        self.trend_status_label.setObjectName("trend-status")
+        self.trend_status_label.setWordWrap(True)
+        trend_layout.addWidget(self.trend_status_label)
         right_layout.addWidget(trend_panel, 1)
         layout.addWidget(right, 1)
         return tab
@@ -353,6 +397,20 @@ class MainWindow(QMainWindow):
         for index, card in enumerate(self.guide_cards):
             steps.addWidget(card, index // 2, index % 2)
         layout.addLayout(steps)
+
+        relations = QFrame()
+        relations.setObjectName("guide-intro")
+        relations_layout = QVBoxLayout(relations)
+        relations_layout.setContentsMargins(20, 16, 20, 16)
+        relations_layout.setSpacing(7)
+        relations_title = QLabel("基础参数与高级参数的公式联系")
+        relations_title.setObjectName("guide-intro-title")
+        relations_text = QLabel(PARAMETER_RELATION_HELP)
+        relations_text.setObjectName("relation-text")
+        relations_text.setWordWrap(True)
+        relations_layout.addWidget(relations_title)
+        relations_layout.addWidget(relations_text)
+        layout.addWidget(relations)
 
         notice = QLabel(
             "数据边界：Maxwell/FEA 校准参考库尚未完成后，界面会明确显示"
@@ -443,6 +501,13 @@ class MainWindow(QMainWindow):
         advanced_hint.setObjectName("section-caption")
         advanced_hint.setWordWrap(True)
         content_layout.addWidget(advanced_hint)
+
+        self.design_relation_label = QLabel(
+            "完成一次预测后，这里会显示当前设计的关键派生量和公式链结果。"
+        )
+        self.design_relation_label.setObjectName("design-relation")
+        self.design_relation_label.setWordWrap(True)
+        content_layout.addWidget(self.design_relation_label)
         input_scroll.setWidget(scroll_content)
         layout.addWidget(input_scroll, 1)
 
@@ -495,6 +560,8 @@ class MainWindow(QMainWindow):
                 control.setSingleStep(spec.step)
             control.setValue(getattr(DEFAULT_DESIGN, spec.name))
             control.setMinimumWidth(110)
+            control.setToolTip(PARAMETER_TOOLTIPS[spec.name])
+            label.setToolTip(PARAMETER_TOOLTIPS[spec.name])
             self.inputs[spec.name] = control
             unit = QLabel(spec.unit)
             unit.setObjectName("field-unit")
@@ -538,13 +605,26 @@ class MainWindow(QMainWindow):
         self.fea_summary_label.setWordWrap(True)
         layout.addWidget(self.fea_summary_label)
 
+        self.metrics_help_label = QLabel(
+            "指标说明：R²（拟合优度）越接近 1 越好，表示模型解释测试数据波动的比例；"
+            "MAE（平均绝对误差）是预测值与目标值的平均绝对偏差，越小越好；"
+            "RMSE（均方根误差）也会放大较大的误差，越小越好。MAE/RMSE 的单位与对应目标相同。"
+            "这些指标用于检查随机森林对合成解析基线的拟合质量，"
+            "不代表真实电机的制造精度或 FEA 精度。"
+        )
+        self.metrics_help_label.setObjectName("metrics-help")
+        self.metrics_help_label.setWordWrap(True)
+        layout.addWidget(self.metrics_help_label)
+
         content = QHBoxLayout()
         self.metrics_table = QTableWidget(0, 4)
-        self.metrics_table.setHorizontalHeaderLabels(["拓扑 / 目标", "R²", "MAE", "RMSE"])
+        self.metrics_table.setHorizontalHeaderLabels(
+            ["拓扑 / 目标", "拟合优度 R²", "平均绝对误差 MAE", "均方根误差 RMSE"]
+        )
         self.metrics_table.horizontalHeader().setStretchLastSection(True)
         self.metrics_table.verticalHeader().setVisible(False)
         self.metrics_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.metrics_table.setMinimumWidth(390)
+        self.metrics_table.setMinimumWidth(500)
         self.importance_canvas = ImportancePlotCanvas()
         content.addWidget(self.metrics_table, 1)
         content.addWidget(self.importance_canvas, 2)
@@ -627,6 +707,23 @@ class MainWindow(QMainWindow):
             report.analytical.efficiency_pct,
             "%",
         )
+        evaluation = self.prediction_service.analytical_model.evaluate(design)
+        topology = next(item for item in SPM_TOPOLOGIES if item.key == design.topology)
+        available_yoke_mm = (
+            evaluation.rotor_diameter_mm - design.shaft_diameter_mm
+        ) / 2.0
+        self.design_relation_label.setText(
+            f"公式链：p={topology.pole_pairs}，fe={evaluation.electrical_frequency_hz:.1f} Hz；"
+            f"转子外径={evaluation.rotor_diameter_mm:.1f} mm，"
+            f"轭厚空间={available_yoke_mm:.2f} mm；"
+            f"Bδ={evaluation.airgap_flux_density_t:.4f} T → "
+            f"ψf={evaluation.pm_flux_linkage_wb:.5f} Wb → "
+            f"T={report.analytical.torque_nm:.3f} N·m；"
+            f"P轴={evaluation.shaft_power_w:.1f} W，"
+            f"P铜={evaluation.copper_loss_w:.2f} W，P铁={evaluation.core_loss_w:.2f} W，"
+            f"P机械={evaluation.mechanical_loss_w:.2f} W，"
+            f"η={report.analytical.efficiency_pct:.2f}%。"
+        )
         self.prediction_message.setText(
             self._prediction_summary(report, design, elapsed_ms)
         )
@@ -668,6 +765,7 @@ class MainWindow(QMainWindow):
 
         if self.prediction_service is None:
             self.validation_label.setText("模型尚未就绪，不能生成趋势。")
+            self.trend_status_label.setText("模型尚未就绪，无法判断参数趋势。")
             return
         try:
             design = self.current_design()
@@ -676,8 +774,28 @@ class MainWindow(QMainWindow):
             series = self.prediction_service.scan(design, parameter, output)
         except ValueError as exc:
             self.validation_label.setText(str(exc))
+            self.trend_status_label.setText("当前设计参数不满足几何约束，未生成趋势。")
             return
         self.trend_canvas.plot_series(series)
+        self.trend_status_label.setText(self._trend_status(series))
+
+    @staticmethod
+    def _trend_status(series: TrendSeries) -> str:
+        """Explain how many scan points are physical and AI-covered."""
+
+        total = len(series.x_values)
+        valid_count = sum(series.design_valid) if series.design_valid else total
+        ai_count = series.ai_point_count
+        formula_count = series.formula_point_count
+        parts = [
+            f"扫描 {total} 点：满足几何约束 {valid_count} 点，"
+            f"公式趋势可用 {formula_count} 点，AI 代理覆盖 {ai_count} 点。",
+            "折线断点表示该位置不可行或超出 300–3500 W 训练功率范围；"
+            "实线是解析公式趋势，虚线是 AI 代理。",
+        ]
+        if ai_count == 0 and formula_count > 0:
+            parts.append("当前扫描没有落入 AI 训练覆盖区，只能参考公式趋势。")
+        return " ".join(parts)
 
     def start_training(self) -> None:
         """Start the bundled-data training job in a background QThread."""
@@ -764,6 +882,12 @@ class MainWindow(QMainWindow):
             self.fea_summary_label.setText(self._format_fea_metrics(bundle.fea_metrics))
             self._populate_metrics(bundle)
             self.importance_canvas.plot_importance(bundle.feature_importances)
+            self.design_relation_label.setText(
+                "模型已就绪；点击“预测当前设计”后显示 Bδ、ψf、转矩、损耗和效率的公式链结果。"
+            )
+            self.trend_status_label.setText(
+                "模型已就绪；点击“更新趋势”查看公式趋势和 AI 代理预测。"
+            )
         else:
             self.stage_label.setText("模型待训练")
             self.model_status_label.setText(self.load_error or "模型尚未训练")
@@ -777,6 +901,10 @@ class MainWindow(QMainWindow):
             self.torque_card.clear_values("N·m")
             self.ripple_card.clear_values("%")
             self.efficiency_card.clear_values("%")
+            self.design_relation_label.setText(
+                "模型尚未就绪；填写参数后仍需训练或加载模型才能给出完整公式链结果。"
+            )
+            self.trend_status_label.setText("模型尚未就绪，不能生成趋势。")
 
     def _populate_metrics(self, bundle: ModelBundle) -> None:
         rows: list[tuple[str, str, str, str]] = []

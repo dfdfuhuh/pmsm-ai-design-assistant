@@ -1,6 +1,6 @@
 # Windows 免安装便携版
 
-记录日期：2026-11-18
+记录日期：2026-11-20
 
 ## 文件
 
@@ -8,8 +8,8 @@
 D:\CODES\PMSM-AI-Design-Assistant-portable.zip
 ```
 
-- 大小：207,472,324 字节，约 197.9 MiB
-- SHA-256：`7ef85a4f2802d01df298ddb3a5b351f3918ebebb7205ba352845625e2ff2fd96`
+- 大小：207,481,258 字节，约 197.9 MiB
+- SHA-256：`2124182ce4d3ff576e973eb3565f75eb6980ac70a605dacd4396b5c36b8a0547`
 - 解压后文件数：2235
 - 内置模型：85.3 MiB
 
@@ -43,6 +43,8 @@ python scripts/build_portable.py
 - ZIP 解压文件数与构建目录一致。
 - 解压副本在清空 `CONDA_PREFIX`、`CONDA_DEFAULT_ENV`、`PYTHONPATH`、`PYTHONHOME` 并将 PATH 限制为 Windows 系统目录后，EXE 自检返回 0。
 - 内置随机森林模型成功加载。
+- 参数趋势页同时展示解析公式实线和 AI 代理虚线；不可行点与训练域外点以断点显示。
+- 模型评估页提供 R²、MAE、RMSE 的中文定义、单位和适用范围说明。
 
 ## 限制
 

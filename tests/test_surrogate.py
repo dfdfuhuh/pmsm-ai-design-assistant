@@ -54,7 +54,43 @@ def test_prediction_service_returns_baseline_and_trend(tiny_service) -> None:
     assert report.analytical.torque_nm > 0
     assert series.parameter == "air_gap_mm"
     assert len(series.x_values) == 50
+    assert len(series.analytical_y_values) == 50
     assert any(value is not None for value in series.y_values)
+    assert any(value is not None for value in series.analytical_y_values)
+
+
+def test_scan_preserves_invalid_geometries_as_chart_gaps(tiny_service) -> None:
+    series = tiny_service.scan(
+        DEFAULT_DESIGN,
+        "stator_outer_diameter_mm",
+        "torque_nm",
+        points=16,
+    )
+
+    assert len(series.x_values) == 16
+    assert series.design_valid[0] is False
+    assert series.y_values[0] is None
+    assert series.analytical_y_values[0] is None
+    assert any(series.design_valid)
+
+
+def test_formula_scan_respects_target_dependencies(tiny_service) -> None:
+    speed_series = tiny_service.scan(
+        DEFAULT_DESIGN, "speed_rpm", "torque_nm", points=9
+    )
+    voltage_series = tiny_service.scan(
+        DEFAULT_DESIGN, "dc_bus_voltage_v", "torque_nm", points=9
+    )
+    resistance_series = tiny_service.scan(
+        DEFAULT_DESIGN, "phase_resistance_ohm", "torque_nm", points=9
+    )
+    shaft_series = tiny_service.scan(
+        DEFAULT_DESIGN, "shaft_diameter_mm", "torque_nm", points=9
+    )
+
+    for series in (speed_series, voltage_series, resistance_series, shaft_series):
+        values = [value for value in series.analytical_values if value is not None]
+        assert max(values) - min(values) < 1e-9
 
 
 def test_prediction_service_rejects_unknown_scan_parameter(tiny_service) -> None:

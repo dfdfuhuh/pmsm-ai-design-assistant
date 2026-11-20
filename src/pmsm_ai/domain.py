@@ -1,4 +1,4 @@
-"""Validated design parameters for three surface-mounted PMSM topologies."""
+"""Validated design parameters for five surface-mounted PMSM topologies."""
 
 from __future__ import annotations
 

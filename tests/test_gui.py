@@ -21,6 +21,11 @@ def test_main_window_contains_three_workbench_tabs(qtbot, tiny_service) -> None:
     assert window.input_tabs.count() == 2
     assert window.topology_combo.count() == 5
     assert window.predict_button.isEnabled()
+    assert "拟合优度" in window.metrics_table.horizontalHeaderItem(1).text()
+    assert "平均绝对误差" in window.metrics_table.horizontalHeaderItem(2).text()
+    assert "均方根误差" in window.metrics_table.horizontalHeaderItem(3).text()
+    assert "真实电机" in window.metrics_help_label.text()
+    assert "等待生成参数趋势" in window.trend_canvas.figure.axes[0].texts[0].get_text()
 
 
 def test_prediction_button_updates_metrics_and_trend(qtbot, tiny_service) -> None:
@@ -33,7 +38,12 @@ def test_prediction_button_updates_metrics_and_trend(qtbot, tiny_service) -> Non
     assert "公式基准" in window.torque_card.baseline_label.text()
     assert "本次预测耗时" in window.prediction_message.text()
     assert "解析输出功率" in window.prediction_message.text()
+    assert "公式链" in window.design_relation_label.text()
     assert window.trend_canvas.figure.axes[0].lines
+    assert "解析公式趋势" in [
+        line.get_label() for line in window.trend_canvas.figure.axes[0].lines
+    ]
+    assert "额定相电流 RMS (A)" in window.trend_canvas.figure.axes[0].get_xlabel()
 
 
 def test_topology_selector_changes_design(qtbot, tiny_service) -> None:
