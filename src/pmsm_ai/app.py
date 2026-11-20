@@ -140,7 +140,7 @@ QLabel#metric-caption {
 }
 QLabel#metric-value {
     color: #173c31;
-    font-size: 25px;
+    font-size: 22px;
     font-weight: 700;
 }
 QLabel#metric-baseline, QLabel#prediction-message {

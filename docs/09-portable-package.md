@@ -8,8 +8,8 @@
 D:\CODES\PMSM-AI-Design-Assistant-portable.zip
 ```
 
-- 大小：207,481,258 字节，约 197.9 MiB
-- SHA-256：`2124182ce4d3ff576e973eb3565f75eb6980ac70a605dacd4396b5c36b8a0547`
+- 大小：207,481,691 字节，约 197.9 MiB
+- SHA-256：`1f7d20ff458869adf18b9f0c87eabf4ea9c21b7f03c25e013fbf2af51d5ee917`
 - 解压后文件数：2235
 - 内置模型：85.3 MiB
 

@@ -287,10 +287,15 @@ class MainWindow(QMainWindow):
         trend_panel = QFrame()
         trend_panel.setObjectName("panel")
         trend_layout = QVBoxLayout(trend_panel)
-        trend_layout.setContentsMargins(14, 12, 14, 12)
+        trend_layout.setContentsMargins(12, 9, 12, 9)
+        trend_layout.setSpacing(5)
         trend_header = QHBoxLayout()
         trend_title = QLabel("参数扫描趋势")
         trend_title.setObjectName("section-title")
+        trend_title.setToolTip(
+            "实线为解析公式趋势，虚线为 AI 代理预测；"
+            "断点表示几何不可行或超出训练功率范围。"
+        )
         trend_header.addWidget(trend_title)
         trend_header.addStretch(1)
 
@@ -310,13 +315,6 @@ class MainWindow(QMainWindow):
         trend_header.addWidget(self.trend_output_combo)
         trend_header.addWidget(self.trend_button)
         trend_layout.addLayout(trend_header)
-
-        self.trend_help_label = QLabel(
-            "实线为解析公式趋势，虚线为 AI 代理预测。断点表示几何不可行或超出训练功率范围。"
-        )
-        self.trend_help_label.setObjectName("section-caption")
-        self.trend_help_label.setWordWrap(True)
-        trend_layout.addWidget(self.trend_help_label)
 
         self.trend_canvas = TrendPlotCanvas()
         trend_layout.addWidget(self.trend_canvas)
@@ -787,15 +785,13 @@ class MainWindow(QMainWindow):
         valid_count = sum(series.design_valid) if series.design_valid else total
         ai_count = series.ai_point_count
         formula_count = series.formula_point_count
-        parts = [
-            f"扫描 {total} 点：满足几何约束 {valid_count} 点，"
-            f"公式趋势可用 {formula_count} 点，AI 代理覆盖 {ai_count} 点。",
-            "折线断点表示该位置不可行或超出 300–3500 W 训练功率范围；"
-            "实线是解析公式趋势，虚线是 AI 代理。",
-        ]
+        status = (
+            f"扫描 {total} 点｜有效设计 {valid_count}｜公式 {formula_count}｜AI {ai_count}｜"
+            "断线=不可行或超出 300–3500 W 训练域"
+        )
         if ai_count == 0 and formula_count > 0:
-            parts.append("当前扫描没有落入 AI 训练覆盖区，只能参考公式趋势。")
-        return " ".join(parts)
+            status += "；当前只能参考公式趋势"
+        return status
 
     def start_training(self) -> None:
         """Start the bundled-data training job in a background QThread."""
@@ -876,7 +872,6 @@ class MainWindow(QMainWindow):
             self.model_summary_label.setText(
                 f"{len(SPM_TOPOLOGIES)} 种拓扑共训练 {metadata['rows']} 条样本；"
                 f"数据来源：{bundle.data_source}。"
-                f"{metadata['estimators']} 棵树，最大深度 {metadata['max_depth']}。"
                 "以下为各拓扑独立测试集指标；结果只验证对合成解析生成器的拟合。"
             )
             self.fea_summary_label.setText(self._format_fea_metrics(bundle.fea_metrics))

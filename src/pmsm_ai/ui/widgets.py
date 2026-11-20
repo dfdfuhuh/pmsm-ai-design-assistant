@@ -18,8 +18,8 @@ class MetricCard(QFrame):
         self.setObjectName("metric-card")
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(6)
+        layout.setContentsMargins(12, 9, 12, 9)
+        layout.setSpacing(3)
 
         caption = QLabel(title)
         caption.setObjectName("metric-caption")

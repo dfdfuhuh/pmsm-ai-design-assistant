@@ -80,9 +80,9 @@ class TrendPlotCanvas(FigureCanvasQTAgg):
     """Parameter-scan chart with gaps for invalid design combinations."""
 
     def __init__(self) -> None:
-        self.figure = Figure(figsize=(6.2, 3.2), dpi=100)
+        self.figure = Figure(figsize=(6.2, 3.3), dpi=100)
         super().__init__(self.figure)
-        self.setMinimumHeight(285)
+        self.setMinimumHeight(180)
         self.show_placeholder()
 
     def show_placeholder(self) -> None:
@@ -109,7 +109,7 @@ class TrendPlotCanvas(FigureCanvasQTAgg):
             transform=axes.transAxes,
         )
         axes.set_axis_off()
-        self.figure.tight_layout()
+        self.figure.subplots_adjust(left=0.02, right=0.98, bottom=0.02, top=0.98)
         self.draw_idle()
 
     def plot_series(self, series: TrendSeries) -> None:
@@ -139,7 +139,7 @@ class TrendPlotCanvas(FigureCanvasQTAgg):
                 transform=axes.transAxes,
             )
             axes.set_axis_off()
-            self.figure.tight_layout()
+            self.figure.subplots_adjust(left=0.02, right=0.98, bottom=0.02, top=0.98)
             self.draw_idle()
             return
 
@@ -164,18 +164,22 @@ class TrendPlotCanvas(FigureCanvasQTAgg):
         axes.set_xlabel(_PARAMETER_LABELS[series.parameter])
         axes.set_ylabel(y_label)
         axes.grid(True, color="#dce6e1", linewidth=0.8, alpha=0.9)
+        axes.set_axisbelow(True)
         axes.spines[["top", "right"]].set_visible(False)
-        axes.legend(loc="best", fontsize=8, frameon=False)
-        axes.text(
-            0.0,
-            1.02,
-            "实线为公式趋势，虚线为 AI 代理；断点表示不可行或超出训练域",
-            transform=axes.transAxes,
-            fontsize=8,
-            color="#73857e",
-            va="bottom",
+        x_min = float(x_values.min())
+        x_max = float(x_values.max())
+        x_padding = max((x_max - x_min) * 0.02, 0.5)
+        axes.set_xlim(x_min - x_padding, x_max + x_padding)
+        finite_values = np.concatenate(
+            (formula_values[np.isfinite(formula_values)], ai_values[np.isfinite(ai_values)])
         )
-        self.figure.tight_layout()
+        maximum = float(finite_values.max())
+        if series.output == "efficiency_pct":
+            axes.set_ylim(0.0, 100.0)
+        else:
+            axes.set_ylim(0.0, max(1.0, maximum * 1.15))
+        axes.legend(loc="best", fontsize=8, frameon=False)
+        self.figure.subplots_adjust(left=0.13, right=0.98, bottom=0.22, top=0.95)
         self.draw_idle()
 
 
